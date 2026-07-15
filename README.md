@@ -10,7 +10,8 @@ tablette ou ordinateur.
 ## Stack
 
 - Vue 3 (Composition API)
-- Vite
+- Vite (build en un seul fichier `dist/index.html` via `vite-plugin-singlefile`, pour
+  fonctionner sans serveur en `file://`)
 - Tailwind CSS v4 (`@tailwindcss/vite`)
 - Icônes [Material Design Icons](https://materialdesignicons.com/) via `@mdi/js` (SVG
   inline, pas de police ni de CDN — compatible hors ligne)
@@ -41,24 +42,32 @@ récupérer l'app déjà buildée sans avoir à relancer `npm install`/`npm run 
 
 ## Utiliser l'app hors ligne
 
-- **Ouverture directe du fichier (`file://`) : ne fonctionne pas.** Le build Vite charge le
-  JavaScript via des modules ES (`<script type="module">`) et une feuille de style séparée.
-  Les navigateurs bloquent ces requêtes en `file://` avec une erreur CORS (« Cross origin
-  requests are only supported for protocol schemes: http, https... »), ce qui donne un
-  écran blanc.
-- **Méthode qui fonctionne : servir `dist/` avec un petit serveur local.** Par exemple :
+Double-cliquez sur `dist/index.html` (ou glissez-le dans un navigateur) : l'app se lance
+directement en `file://`, sans serveur ni connexion internet.
 
-  ```bash
-  npx serve dist
-  ```
+Par défaut, un build Vite charge le JavaScript via un `<script type="module">` et une
+feuille de style externes — les navigateurs bloquent ce genre de requête en `file://`
+(erreur CORS, écran blanc). Pour l'éviter, `vite.config.js` utilise le plugin
+`vite-plugin-singlefile`, qui inline tout le JS et le CSS directement dans `index.html` :
+il n'y a donc plus aucune requête réseau au chargement, et le fichier fonctionne partout,
+y compris ouvert directement depuis l'explorateur de fichiers du téléphone/tablette/PC.
 
-  puis ouvrir l'URL affichée (`http://localhost:3000` par défaut) dans le navigateur.
-  Alternative en IDE (PhpStorm, WebStorm...) : clic droit sur `dist/index.html` → **Open in
-  Browser**.
+Si malgré tout l'ouverture directe échoue sur un navigateur ou un appareil particulier,
+servez `dist/` avec un petit serveur local en repli :
 
-  Pour un usage sur téléphone/tablette sans connexion, lancez ce serveur sur un PC/mini-PC
-  présent sur place et connectez l'appareil au même réseau local (Wi-Fi sans accès internet
-  suffit), ou utilisez un serveur HTTP statique portable installé directement sur l'appareil.
+```bash
+npx serve dist
+```
+
+puis ouvrez l'URL affichée (`http://localhost:3000` par défaut). Alternative en IDE
+(PhpStorm, WebStorm...) : clic droit sur `dist/index.html` → **Open in Browser**.
+
+**Cas particulier développement sous WSL → test sur Windows :** si vous copiez le dossier
+`dist/` depuis WSL (`\\wsl.localhost\...`) vers un dossier Windows natif (ex. Téléchargements),
+Windows peut marquer les fichiers copiés comme provenant d'un « autre ordinateur » (Mark of
+the Web), et Firefox refuse alors de les ouvrir (« L'accès au fichier a été refusé »). Dans ce
+cas : clic droit sur `index.html` → **Propriétés** → onglet **Général** → cochez
+**Débloquer** → **OK**, puis rouvrez le fichier.
 
 ## Fonctionnalités
 
