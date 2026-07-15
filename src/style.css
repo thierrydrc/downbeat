@@ -1,0 +1,34 @@
+@import "tailwindcss";
+
+@theme {
+  --color-downbeat-bg: #0b0c0e;
+  --color-downbeat-panel: #111215;
+  --color-downbeat-panel-2: #17181b;
+  --color-downbeat-accent: #ff5a36;
+  --color-downbeat-offbeat: #3e8fb0;
+  --color-downbeat-text: #ededec;
+}
+
+html {
+  color-scheme: dark;
+}
+
+body {
+  background-color: var(--color-downbeat-bg);
+  color: var(--color-downbeat-text);
+}
+
+@keyframes pulse-beat {
+  0% {
+    opacity: 0.9;
+    transform: scale(0.85);
+  }
+  60% {
+    opacity: 0.35;
+    transform: scale(1.05);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(1.15);
+  }
+}
