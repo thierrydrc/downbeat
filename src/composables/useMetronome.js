@@ -7,9 +7,27 @@ import { ref, onUnmounted } from 'vue'
 const LOOKAHEAD_MS = 25
 const SCHEDULE_AHEAD_TIME = 0.1
 const CLICK_DURATION = 0.05
+// Un simple pic instantané qui redescend aussitôt ne contient presque aucune
+// énergie (quelques ms au-dessus de 0 dBFS) : même avec un gain > 1 et un
+// limiteur derrière, il n'y a quasiment rien à "pousser" vers le plafond, donc
+// le volume perçu ne bouge presque pas entre 100% et 400%. Ce plateau force
+// le clic à rester à pleine amplitude un court instant avant de redescendre,
+// ce qui donne au limiteur une vraie plage à comprimer/pousser vers le
+// plafond quand le gain augmente - c'est ça, plus que le gain seul, qui rend
+// le clic perceptiblement plus fort à volume élevé.
+const CLICK_SUSTAIN = 0.008
 
 const MIN_TEMPO = 30
 const MAX_TEMPO = 240
+
+// Le clic (oscillateur + enveloppe) atteint déjà l'amplitude pleine échelle
+// (±1) avant le gain principal. Pour aller plus fort qu'un simple gain
+// unitaire (1 = 0 dBFS), on autorise un gain > 1 ("boost" numérique) et on
+// s'appuie sur un limiteur en aval pour absorber le clipping que ça
+// provoquerait sinon - indispensable pour un usage scène (sortie casque/ligne
+// d'un téléphone vers une console de mixage, où même le gain d'entrée au
+// maximum peine à donner un niveau utilisable sans ce boost).
+const MAX_VOLUME = 4
 
 const TAP_MAX_INTERVALS = 8
 const TAP_TIMEOUT_MS = 2000
@@ -23,6 +41,7 @@ export function useMetronome() {
 
   let audioCtx = null
   let masterGain = null
+  let limiter = null
 
   let nextNoteTime = 0
   let currentBeatNumber = 0
@@ -42,7 +61,19 @@ export function useMetronome() {
       audioCtx = new AudioContextClass()
       masterGain = audioCtx.createGain()
       masterGain.gain.value = volume.value
-      masterGain.connect(audioCtx.destination)
+
+      // Limiteur agressif mais propre : absorbe le dépassement de 0 dBFS
+      // provoqué par un gain > 1 (boost au-delà de l'unité) sans laisser
+      // passer de distorsion audible qui dénaturerait le clic.
+      limiter = audioCtx.createDynamicsCompressor()
+      limiter.threshold.value = -3
+      limiter.knee.value = 0
+      limiter.ratio.value = 16
+      limiter.attack.value = 0.003
+      limiter.release.value = 0.08
+
+      masterGain.connect(limiter)
+      limiter.connect(audioCtx.destination)
     }
     if (audioCtx.state === 'suspended') {
       audioCtx.resume()
@@ -54,11 +85,17 @@ export function useMetronome() {
     const envelope = audioCtx.createGain()
 
     const isDownbeat = beatNumber === 0
-    osc.type = 'sine'
+    // Carrée plutôt que sinusoïdale : à amplitude de crête égale, une onde
+    // carrée transporte nettement plus d'énergie (RMS proche du pic, contre
+    // ~70% pour une sinusoïdale), donc un son perçu comme plus fort sans
+    // dépasser 0 dBFS ni ajouter de distorsion (c'est une forme d'onde
+    // propre, pas un signal saturé).
+    osc.type = 'square'
     osc.frequency.value = isDownbeat ? 1500 : 1000
 
     envelope.gain.setValueAtTime(0, time)
     envelope.gain.linearRampToValueAtTime(1, time + 0.001)
+    envelope.gain.setValueAtTime(1, time + 0.001 + CLICK_SUSTAIN)
     envelope.gain.exponentialRampToValueAtTime(0.001, time + CLICK_DURATION)
 
     osc.connect(envelope)
@@ -148,7 +185,7 @@ export function useMetronome() {
   }
 
   function setVolume(value) {
-    volume.value = Math.min(1, Math.max(0, value))
+    volume.value = Math.min(MAX_VOLUME, Math.max(0, value))
     if (masterGain) {
       masterGain.gain.value = volume.value
     }
@@ -190,6 +227,7 @@ export function useMetronome() {
     currentBeat,
     minTempo: MIN_TEMPO,
     maxTempo: MAX_TEMPO,
+    maxVolume: MAX_VOLUME,
     start,
     stop,
     toggle,

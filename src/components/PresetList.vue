@@ -1,17 +1,17 @@
 <script setup>
 import { ref } from 'vue'
 import { mdiDotsVertical, mdiDownload, mdiDragVertical, mdiPlus, mdiTrashCanOutline, mdiUpload } from '@mdi/js'
-import { useSongs } from '../composables/useSongs.js'
+import { usePresets } from '../composables/usePresets.js'
 import MdiIcon from './MdiIcon.vue'
 import Modal from './Modal.vue'
 
 const props = defineProps({
-  selectedSongId: { type: String, default: null },
+  selectedPresetId: { type: String, default: null },
 })
 
-const emit = defineEmits(['load-song', 'remove-song'])
+const emit = defineEmits(['load-preset', 'remove-preset'])
 
-const { songs, addSong, removeSong, exportSongs, importSongs } = useSongs()
+const { presets, addPreset, removePreset, exportPresets, importPresets } = usePresets()
 
 const isAddModalOpen = ref(false)
 const name = ref('')
@@ -29,18 +29,18 @@ function closeAddModal() {
 
 function handleAdd() {
   if (!name.value.trim()) return
-  addSong({ name: name.value, tempo: tempo.value, beatsPerMeasure: beatsPerMeasure.value })
+  addPreset({ name: name.value, tempo: tempo.value, beatsPerMeasure: beatsPerMeasure.value })
   closeAddModal()
 }
 
-function handleLoad(song) {
-  emit('load-song', song.id === props.selectedSongId ? null : song)
+function handleLoad(preset) {
+  emit('load-preset', preset.id === props.selectedPresetId ? null : preset)
 }
 
-function handleRemove(song) {
-  if (!window.confirm(`Supprimer "${song.name}" de la liste ?`)) return
-  removeSong(song.id)
-  emit('remove-song', song.id)
+function handleRemove(preset) {
+  if (!window.confirm(`Supprimer "${preset.name}" de la liste ?`)) return
+  removePreset(preset.id)
+  emit('remove-preset', preset.id)
 }
 
 function triggerImport() {
@@ -58,7 +58,7 @@ async function handleFileChange(event) {
     const replace = window.confirm(
       'Remplacer la liste actuelle par le fichier importé ?\nOK = remplacer\nAnnuler = fusionner avec la liste existante',
     )
-    importSongs(data, { replace })
+    importPresets(data, { replace })
   } catch {
     importError.value = 'Fichier JSON invalide.'
   }
@@ -67,7 +67,7 @@ async function handleFileChange(event) {
 const isExportModalOpen = ref(false)
 
 function handleExportClick() {
-  exportSongs()
+  exportPresets()
   isExportModalOpen.value = false
 }
 
@@ -80,28 +80,28 @@ function handleImportClick() {
 // dragstart/dragover ne fonctionne pas sur écran tactile).
 const draggedId = ref(null)
 
-function startDrag(song, event) {
-  draggedId.value = song.id
+function startDrag(preset, event) {
+  draggedId.value = preset.id
   event.currentTarget.setPointerCapture?.(event.pointerId)
 }
 
 function handlePointerMove(event) {
   if (!draggedId.value) return
   const target = document.elementFromPoint(event.clientX, event.clientY)
-  const li = target?.closest('[data-song-id]')
+  const li = target?.closest('[data-preset-id]')
   if (!li) return
-  const overId = li.dataset.songId
+  const overId = li.dataset.presetId
   if (overId === draggedId.value) return
 
-  const list = songs.value
-  const fromIndex = list.findIndex((s) => s.id === draggedId.value)
-  const toIndex = list.findIndex((s) => s.id === overId)
+  const list = presets.value
+  const fromIndex = list.findIndex((p) => p.id === draggedId.value)
+  const toIndex = list.findIndex((p) => p.id === overId)
   if (fromIndex === -1 || toIndex === -1) return
 
   const updated = [...list]
   const [moved] = updated.splice(fromIndex, 1)
   updated.splice(toIndex, 0, moved)
-  songs.value = updated
+  presets.value = updated
 }
 
 function endDrag() {
@@ -111,7 +111,7 @@ function endDrag() {
 
 <template>
   <div class="flex w-full flex-col gap-4">
-    <h2 class="hidden text-lg font-semibold text-downbeat-text md:block">Chansons</h2>
+    <h2 class="hidden text-lg font-semibold text-downbeat-text md:block">Presets</h2>
 
     <div class="flex gap-2">
       <button
@@ -120,7 +120,7 @@ function endDrag() {
         @click="isAddModalOpen = true"
       >
         <MdiIcon :path="mdiPlus" class="h-4 w-4" />
-        Ajouter une chanson
+        Ajouter un preset
       </button>
 
       <button
@@ -141,23 +141,23 @@ function endDrag() {
     </div>
     <p v-if="importError" class="text-sm text-downbeat-accent">{{ importError }}</p>
 
-    <ul v-if="songs.length" class="flex flex-col gap-2">
+    <ul v-if="presets.length" class="flex flex-col gap-2">
       <li
-        v-for="song in songs"
-        :key="song.id"
-        :data-song-id="song.id"
+        v-for="preset in presets"
+        :key="preset.id"
+        :data-preset-id="preset.id"
         class="flex items-center gap-2 rounded-lg bg-downbeat-panel-2 px-2 py-2 transition-colors motion-reduce:transition-none"
         :class="[
-          song.id === selectedSongId ? 'ring-2 ring-downbeat-accent' : '',
-          song.id === draggedId ? 'opacity-60' : '',
+          preset.id === selectedPresetId ? 'ring-2 ring-downbeat-accent' : '',
+          preset.id === draggedId ? 'opacity-60' : '',
         ]"
       >
         <span
           class="flex h-10 w-10 shrink-0 touch-none cursor-grab items-center justify-center rounded-lg text-downbeat-text/40 outline-none focus-visible:ring-2 focus-visible:ring-downbeat-accent active:cursor-grabbing"
           role="button"
           tabindex="0"
-          aria-label="Réordonner la chanson"
-          @pointerdown="startDrag(song, $event)"
+          aria-label="Réordonner le preset"
+          @pointerdown="startDrag(preset, $event)"
           @pointermove="handlePointerMove"
           @pointerup="endDrag"
           @pointercancel="endDrag"
@@ -168,37 +168,37 @@ function endDrag() {
         <button
           type="button"
           class="min-w-0 flex-1 truncate rounded-lg px-1 py-1 text-left outline-none focus-visible:ring-2 focus-visible:ring-downbeat-accent"
-          @click="handleLoad(song)"
+          @click="handleLoad(preset)"
         >
           <span
             class="block truncate"
-            :class="song.id === selectedSongId ? 'font-semibold text-downbeat-accent' : 'text-downbeat-text'"
+            :class="preset.id === selectedPresetId ? 'font-semibold text-downbeat-accent' : 'text-downbeat-text'"
           >
-            {{ song.name }}
+            {{ preset.name }}
           </span>
           <span class="font-mono text-xs text-downbeat-text/60">
-            {{ song.tempo }} BPM · {{ song.beatsPerMeasure }}/4
+            {{ preset.tempo }} BPM · {{ preset.beatsPerMeasure }}/4
           </span>
         </button>
 
         <button
           type="button"
           class="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg text-downbeat-text/60 outline-none transition-colors motion-reduce:transition-none hover:text-downbeat-accent focus-visible:ring-2 focus-visible:ring-downbeat-accent"
-          aria-label="Supprimer la chanson"
-          @click="handleRemove(song)"
+          aria-label="Supprimer le preset"
+          @click="handleRemove(preset)"
         >
           <MdiIcon :path="mdiTrashCanOutline" class="h-4 w-4" />
         </button>
       </li>
     </ul>
-    <p v-else class="text-sm text-downbeat-text/50">Aucune chanson enregistrée.</p>
+    <p v-else class="text-sm text-downbeat-text/50">Aucun preset enregistré.</p>
 
-    <Modal :open="isAddModalOpen" title="Ajouter une chanson" @close="closeAddModal">
+    <Modal :open="isAddModalOpen" title="Ajouter un preset" @close="closeAddModal">
       <form class="flex flex-col gap-3" @submit.prevent="handleAdd">
         <input
           v-model="name"
           type="text"
-          placeholder="Nom de la chanson"
+          placeholder="Nom du preset"
           class="rounded-lg bg-downbeat-panel-2 px-3 py-2 text-downbeat-text outline-none placeholder:text-downbeat-text/40 focus-visible:ring-2 focus-visible:ring-downbeat-accent"
           required
           autofocus
@@ -235,7 +235,7 @@ function endDrag() {
         <button
           type="button"
           class="flex h-11 items-center justify-center gap-2 rounded-lg border border-downbeat-panel-2 px-3 text-sm font-medium text-downbeat-text outline-none transition-colors motion-reduce:transition-none hover:bg-downbeat-panel-2 focus-visible:ring-2 focus-visible:ring-downbeat-accent disabled:opacity-40"
-          :disabled="!songs.length"
+          :disabled="!presets.length"
           @click="handleExportClick"
         >
           <MdiIcon :path="mdiDownload" class="h-4 w-4" />
