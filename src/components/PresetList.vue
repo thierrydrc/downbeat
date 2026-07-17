@@ -116,7 +116,7 @@ function endDrag() {
     <div class="flex gap-2">
       <button
         type="button"
-        class="flex h-11 flex-1 items-center justify-center gap-1.5 rounded-lg bg-downbeat-accent px-3 text-sm font-semibold text-downbeat-bg outline-none transition-colors motion-reduce:transition-none hover:brightness-110 focus-visible:ring-2 focus-visible:ring-downbeat-accent/50"
+        class="flex h-11 flex-1 items-center justify-center gap-1.5 rounded-lg bg-downbeat-accent px-3 text-sm font-semibold text-downbeat-on-accent outline-none transition-colors motion-reduce:transition-none hover:brightness-110 focus-visible:ring-2 focus-visible:ring-downbeat-accent/50"
         @click="isAddModalOpen = true"
       >
         <MdiIcon :path="mdiPlus" class="h-4 w-4" />
@@ -223,7 +223,7 @@ function endDrag() {
         </div>
         <button
           type="submit"
-          class="rounded-lg bg-downbeat-accent py-2 text-sm font-semibold text-downbeat-bg outline-none transition-colors motion-reduce:transition-none hover:brightness-110 focus-visible:ring-2 focus-visible:ring-downbeat-accent/50"
+          class="rounded-lg bg-downbeat-accent py-2 text-sm font-semibold text-downbeat-on-accent outline-none transition-colors motion-reduce:transition-none hover:brightness-110 focus-visible:ring-2 focus-visible:ring-downbeat-accent/50"
         >
           Ajouter
         </button>

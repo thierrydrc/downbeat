@@ -1,8 +1,9 @@
 <script setup>
 import { onMounted, onUnmounted, ref } from 'vue'
-import { mdiClose, mdiPlaylistMusic } from '@mdi/js'
+import { mdiClose, mdiPlaylistMusic, mdiWeatherNight, mdiWeatherSunny } from '@mdi/js'
 import { useMetronome } from './composables/useMetronome.js'
 import { usePresets } from './composables/usePresets.js'
+import { useTheme } from './composables/useTheme.js'
 import MetronomeDisplay from './components/MetronomeDisplay.vue'
 import MetronomeControls from './components/MetronomeControls.vue'
 import VolumeControl from './components/VolumeControl.vue'
@@ -18,17 +19,19 @@ const {
   currentBeat,
   minTempo,
   maxTempo,
-  maxVolume,
+  boostEnabled,
   toggle,
   setTempo,
   incrementTempo,
   setBeatsPerMeasure,
   setVolume,
+  setBoost,
   tapTempo,
   loadPreset,
 } = useMetronome()
 
 const { addPreset, updatePreset } = usePresets()
+const { theme, toggleTheme } = useTheme()
 
 const loadedPreset = ref(null)
 const isEditingPreset = ref(false)
@@ -106,16 +109,26 @@ function handleSaveNewPreset() {
             <h1 class="text-base font-bold tracking-tight">Downbeat</h1>
             <p class="text-xs text-downbeat-text/50">Métronome hors ligne</p>
           </div>
-          <button
-            type="button"
-            class="shrink-0 rounded-lg border border-downbeat-panel-2 bg-downbeat-panel p-2.5 text-downbeat-text outline-none transition-colors motion-reduce:transition-none hover:bg-downbeat-panel-2 focus-visible:ring-2 focus-visible:ring-downbeat-accent md:hidden"
-            aria-label="Ouvrir la liste des presets"
-            aria-controls="preset-sidebar"
-            :aria-expanded="isSidebarOpen"
-            @click="isSidebarOpen = true"
-          >
-            <MdiIcon :path="mdiPlaylistMusic" class="h-6 w-6" />
-          </button>
+          <div class="flex shrink-0 items-center gap-2">
+            <button
+              type="button"
+              class="rounded-lg border border-downbeat-panel-2 bg-downbeat-panel p-2.5 text-downbeat-text outline-none transition-colors motion-reduce:transition-none hover:bg-downbeat-panel-2 focus-visible:ring-2 focus-visible:ring-downbeat-accent"
+              :aria-label="theme === 'dark' ? 'Passer en mode clair' : 'Passer en mode sombre'"
+              @click="toggleTheme"
+            >
+              <MdiIcon :path="theme === 'dark' ? mdiWeatherSunny : mdiWeatherNight" class="h-6 w-6" />
+            </button>
+            <button
+              type="button"
+              class="rounded-lg border border-downbeat-panel-2 bg-downbeat-panel p-2.5 text-downbeat-text outline-none transition-colors motion-reduce:transition-none hover:bg-downbeat-panel-2 focus-visible:ring-2 focus-visible:ring-downbeat-accent md:hidden"
+              aria-label="Ouvrir la liste des presets"
+              aria-controls="preset-sidebar"
+              :aria-expanded="isSidebarOpen"
+              @click="isSidebarOpen = true"
+            >
+              <MdiIcon :path="mdiPlaylistMusic" class="h-6 w-6" />
+            </button>
+          </div>
         </header>
 
         <main class="flex flex-1 flex-col items-center gap-4">
@@ -177,7 +190,7 @@ function handleSaveNewPreset() {
           <button
             v-if="loadedPreset && isEditingPreset"
             type="button"
-            class="flex h-11 w-full max-w-md items-center justify-center rounded-lg bg-downbeat-accent px-3 text-sm font-semibold text-downbeat-bg outline-none transition-colors motion-reduce:transition-none hover:brightness-110 focus-visible:ring-2 focus-visible:ring-downbeat-accent/50"
+            class="flex h-11 w-full max-w-md items-center justify-center rounded-lg bg-downbeat-accent px-3 text-sm font-semibold text-downbeat-on-accent outline-none transition-colors motion-reduce:transition-none hover:brightness-110 focus-visible:ring-2 focus-visible:ring-downbeat-accent/50"
             @click="handleSaveEdit"
           >
             Enregistrer
@@ -185,13 +198,18 @@ function handleSaveNewPreset() {
           <button
             v-if="!loadedPreset"
             type="button"
-            class="flex h-11 w-full max-w-md items-center justify-center rounded-lg bg-downbeat-accent px-3 text-sm font-semibold text-downbeat-bg outline-none transition-colors motion-reduce:transition-none hover:brightness-110 focus-visible:ring-2 focus-visible:ring-downbeat-accent/50"
+            class="flex h-11 w-full max-w-md items-center justify-center rounded-lg bg-downbeat-accent px-3 text-sm font-semibold text-downbeat-on-accent outline-none transition-colors motion-reduce:transition-none hover:brightness-110 focus-visible:ring-2 focus-visible:ring-downbeat-accent/50"
             @click="openSavePresetModal"
           >
             Enregistrer le preset
           </button>
 
-          <VolumeControl :volume="volume" :max-volume="maxVolume" @set-volume="setVolume" />
+          <VolumeControl
+            :volume="volume"
+            :boost-enabled="boostEnabled"
+            @set-volume="setVolume"
+            @set-boost="setBoost"
+          />
         </main>
       </div>
     </div>
@@ -240,7 +258,7 @@ function handleSaveNewPreset() {
         />
         <button
           type="submit"
-          class="rounded-lg bg-downbeat-accent py-2 text-sm font-semibold text-downbeat-bg outline-none transition-colors motion-reduce:transition-none hover:brightness-110 focus-visible:ring-2 focus-visible:ring-downbeat-accent/50"
+          class="rounded-lg bg-downbeat-accent py-2 text-sm font-semibold text-downbeat-on-accent outline-none transition-colors motion-reduce:transition-none hover:brightness-110 focus-visible:ring-2 focus-visible:ring-downbeat-accent/50"
         >
           Enregistrer
         </button>

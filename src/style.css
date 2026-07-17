@@ -7,15 +7,44 @@
   --color-downbeat-accent: #ff5a36;
   --color-downbeat-offbeat: #3e8fb0;
   --color-downbeat-text: #ededec;
+  /* Couleur du texte affiché SUR un fond accent (boutons "Ajouter",
+     "Enregistrer"...) - un token dédié plutôt que réutiliser downbeat-bg,
+     car les deux n'ont plus de raison de coïncider en thème clair (voir
+     l'override [data-theme="light"] ci-dessous). */
+  --color-downbeat-on-accent: #0b0c0e;
+}
+
+/* Thème clair : pas un simple négatif du thème sombre. L'accent #ff5a36 n'a
+   que ~3.1:1 de contraste sur blanc (sous le seuil AA 4.5:1) - on l'assombrit
+   légèrement pour rester lisible, ce qui impose aussi de repasser le texte
+   sur accent en blanc plutôt qu'en texte sombre (qui retomberait à ~3.6:1).
+   Même logique pour le bleu "offbeat", trop pâle sur blanc tel quel. */
+:root[data-theme='light'] {
+  --color-downbeat-bg: #f6f6f4;
+  --color-downbeat-panel: #ffffff;
+  --color-downbeat-panel-2: #eceae7;
+  --color-downbeat-accent: #cc3e1c;
+  --color-downbeat-offbeat: #2f6f8c;
+  --color-downbeat-text: #17181b;
+  --color-downbeat-on-accent: #ffffff;
 }
 
 html {
   color-scheme: dark;
 }
 
+html[data-theme='light'] {
+  color-scheme: light;
+}
+
 body {
   background-color: var(--color-downbeat-bg);
   color: var(--color-downbeat-text);
+  /* iOS Safari ignore `user-scalable=no` dans le viewport (accessibilité) :
+     sans ça, double-taper vite sur un bouton (ex. +/- tempo) déclenche un
+     zoom natif malgré la balise meta. `touch-action` bloque ce geste au
+     niveau CSS, respecté par Safari contrairement au viewport seul. */
+  touch-action: manipulation;
 }
 
 @keyframes pulse-beat {

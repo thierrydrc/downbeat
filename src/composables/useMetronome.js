@@ -17,17 +17,18 @@ const CLICK_DURATION = 0.05
 // le clic perceptiblement plus fort à volume élevé.
 const CLICK_SUSTAIN = 0.008
 
-const MIN_TEMPO = 30
-const MAX_TEMPO = 240
+export const MIN_TEMPO = 30
+export const MAX_TEMPO = 240
 
-// Le clic (oscillateur + enveloppe) atteint déjà l'amplitude pleine échelle
-// (±1) avant le gain principal. Pour aller plus fort qu'un simple gain
-// unitaire (1 = 0 dBFS), on autorise un gain > 1 ("boost" numérique) et on
-// s'appuie sur un limiteur en aval pour absorber le clipping que ça
-// provoquerait sinon - indispensable pour un usage scène (sortie casque/ligne
-// d'un téléphone vers une console de mixage, où même le gain d'entrée au
-// maximum peine à donner un niveau utilisable sans ce boost).
-const MAX_VOLUME = 4
+// Le volume "normal" (slider) reste dans la plage naturelle 0-1 (0-100%,
+// gain unitaire max = 0 dBFS). Le boost scène est un choix explicite et
+// séparé (case à cocher), pas un point sur un slider continu - on autorise
+// alors un gain > 1 et on s'appuie sur un limiteur en aval pour absorber le
+// dépassement de 0 dBFS que ça provoquerait sinon, sans distorsion audible.
+// À noter : ce boost ne peut agir que sur le signal numérique envoyé au
+// système - il ne peut pas dépasser le plafond physique de la sortie casque/
+// ligne de l'appareil, ni contourner un éventuel limiteur matériel/OS.
+const BOOST_FACTOR = 4
 
 const TAP_MAX_INTERVALS = 8
 const TAP_TIMEOUT_MS = 2000
@@ -37,11 +38,13 @@ export function useMetronome() {
   const tempo = ref(120)
   const beatsPerMeasure = ref(4)
   const volume = ref(0.7)
+  const boostEnabled = ref(false)
   const currentBeat = ref(-1)
 
   let audioCtx = null
   let masterGain = null
   let limiter = null
+  let wakeLockSentinel = null
 
   let nextNoteTime = 0
   let currentBeatNumber = 0
@@ -60,7 +63,7 @@ export function useMetronome() {
       const AudioContextClass = window.AudioContext || window.webkitAudioContext
       audioCtx = new AudioContextClass()
       masterGain = audioCtx.createGain()
-      masterGain.gain.value = volume.value
+      masterGain.gain.value = volume.value * (boostEnabled.value ? BOOST_FACTOR : 1)
 
       // Limiteur agressif mais propre : absorbe le dépassement de 0 dBFS
       // provoqué par un gain > 1 (boost au-delà de l'unité) sans laisser
@@ -135,6 +138,45 @@ export function useMetronome() {
     rafId = requestAnimationFrame(visualSync)
   }
 
+  // Empêche l'écran de se verrouiller tant que le métronome joue - un usage
+  // scène typique n'implique pas de retoucher l'écran pendant plusieurs
+  // minutes, et un verrouillage peut suspendre l'AudioContext (surtout sur
+  // iOS Safari) et arrêter le clic silencieusement en plein morceau.
+  async function acquireWakeLock() {
+    if (!('wakeLock' in navigator)) return
+    try {
+      wakeLockSentinel = await navigator.wakeLock.request('screen')
+    } catch {
+      // Refusé (économie d'énergie, onglet caché...) : non bloquant, le
+      // métronome continue de fonctionner sans le verrou d'écran.
+      wakeLockSentinel = null
+    }
+  }
+
+  async function releaseWakeLock() {
+    try {
+      await wakeLockSentinel?.release()
+    } catch {
+      // rien à faire
+    }
+    wakeLockSentinel = null
+  }
+
+  // Le wake lock est automatiquement relâché par le navigateur quand l'onglet
+  // passe en arrière-plan, et l'AudioContext peut être suspendu (appel,
+  // notification, mise en veille...). On relance les deux au retour au
+  // premier plan pour que le métronome ne reste pas silencieux sans que
+  // l'utilisateur s'en rende compte.
+  function handleVisibilityChange() {
+    if (document.visibilityState !== 'visible' || !isPlaying.value) return
+    if (audioCtx?.state === 'suspended') {
+      audioCtx.resume()
+    }
+    acquireWakeLock()
+  }
+
+  document.addEventListener('visibilitychange', handleVisibilityChange)
+
   function start() {
     if (isPlaying.value) return
     ensureAudioContext()
@@ -144,6 +186,7 @@ export function useMetronome() {
     isPlaying.value = true
     scheduler()
     rafId = requestAnimationFrame(visualSync)
+    acquireWakeLock()
   }
 
   function stop() {
@@ -158,6 +201,7 @@ export function useMetronome() {
     }
     scheduledBeats.length = 0
     currentBeat.value = -1
+    releaseWakeLock()
   }
 
   function toggle() {
@@ -184,11 +228,19 @@ export function useMetronome() {
     }
   }
 
+  function applyGain() {
+    if (!masterGain) return
+    masterGain.gain.value = volume.value * (boostEnabled.value ? BOOST_FACTOR : 1)
+  }
+
   function setVolume(value) {
-    volume.value = Math.min(MAX_VOLUME, Math.max(0, value))
-    if (masterGain) {
-      masterGain.gain.value = volume.value
-    }
+    volume.value = Math.min(1, Math.max(0, value))
+    applyGain()
+  }
+
+  function setBoost(enabled) {
+    boostEnabled.value = !!enabled
+    applyGain()
   }
 
   function tapTempo() {
@@ -217,6 +269,7 @@ export function useMetronome() {
 
   onUnmounted(() => {
     stop()
+    document.removeEventListener('visibilitychange', handleVisibilityChange)
   })
 
   return {
@@ -224,10 +277,10 @@ export function useMetronome() {
     tempo,
     beatsPerMeasure,
     volume,
+    boostEnabled,
     currentBeat,
     minTempo: MIN_TEMPO,
     maxTempo: MAX_TEMPO,
-    maxVolume: MAX_VOLUME,
     start,
     stop,
     toggle,
@@ -235,6 +288,7 @@ export function useMetronome() {
     incrementTempo,
     setBeatsPerMeasure,
     setVolume,
+    setBoost,
     tapTempo,
     loadPreset,
   }

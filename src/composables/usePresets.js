@@ -1,15 +1,29 @@
 import { ref, watch } from 'vue'
+import { MIN_TEMPO, MAX_TEMPO } from './useMetronome.js'
 
-// Clé conservée telle quelle (héritage de l'ancien nom "songs") pour ne pas
-// perdre les presets déjà enregistrés par les utilisateurs existants.
-const STORAGE_KEY = 'downbeat.songs.v1'
+const STORAGE_KEY = 'downbeat.presets.v1'
+// Ancienne clé (héritage du nom "songs") : migrée une fois vers STORAGE_KEY
+// puis supprimée, pour ne pas perdre les presets déjà enregistrés.
+const LEGACY_STORAGE_KEY = 'downbeat.songs.v1'
 
 function loadFromStorage() {
   try {
     const raw = localStorage.getItem(STORAGE_KEY)
-    if (!raw) return []
-    const parsed = JSON.parse(raw)
-    return Array.isArray(parsed) ? parsed : []
+    if (raw) {
+      const parsed = JSON.parse(raw)
+      return Array.isArray(parsed) ? parsed : []
+    }
+
+    const legacyRaw = localStorage.getItem(LEGACY_STORAGE_KEY)
+    if (legacyRaw) {
+      const parsed = JSON.parse(legacyRaw)
+      const migrated = Array.isArray(parsed) ? parsed : []
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(migrated))
+      localStorage.removeItem(LEGACY_STORAGE_KEY)
+      return migrated
+    }
+
+    return []
   } catch {
     return []
   }
@@ -21,13 +35,25 @@ function makeId() {
     : `${Date.now()}-${Math.random().toString(36).slice(2)}`
 }
 
+// Bornes alignées sur ce que l'UI permet réellement de régler (slider tempo
+// 30-240, mesure 3/4 ou 4/4) : sans ça, un preset importé depuis un JSON
+// trafiqué à la main pourrait stocker (et afficher dans la liste) un tempo
+// ou une mesure que l'app elle-même ne permet jamais d'atteindre.
+function clampTempo(value) {
+  return Math.min(MAX_TEMPO, Math.max(MIN_TEMPO, Math.round(value)))
+}
+
+function clampBeatsPerMeasure(value) {
+  return value === 3 ? 3 : 4
+}
+
 function normalizeEntry(entry) {
   if (!entry || typeof entry.name !== 'string') return null
   const name = entry.name.trim()
   const tempo = Number(entry.tempo)
   const beatsPerMeasure = Number(entry.beatsPerMeasure)
   if (!name || !Number.isFinite(tempo) || !Number.isFinite(beatsPerMeasure)) return null
-  return { id: makeId(), name, tempo, beatsPerMeasure }
+  return { id: makeId(), name, tempo: clampTempo(tempo), beatsPerMeasure: clampBeatsPerMeasure(beatsPerMeasure) }
 }
 
 // État au niveau du module (et non à l'intérieur de usePresets()) : plusieurs
@@ -54,8 +80,8 @@ function addPreset({ name, tempo, beatsPerMeasure }) {
 function updatePreset(id, { tempo, beatsPerMeasure }) {
   const preset = presets.value.find((p) => p.id === id)
   if (!preset) return
-  if (Number.isFinite(tempo)) preset.tempo = tempo
-  if (Number.isFinite(beatsPerMeasure)) preset.beatsPerMeasure = beatsPerMeasure
+  if (Number.isFinite(tempo)) preset.tempo = clampTempo(tempo)
+  if (Number.isFinite(beatsPerMeasure)) preset.beatsPerMeasure = clampBeatsPerMeasure(beatsPerMeasure)
 }
 
 function removePreset(id) {
