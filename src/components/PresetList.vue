@@ -111,7 +111,7 @@ function endDrag() {
 
 <template>
   <div class="flex w-full flex-col gap-4">
-    <h2 class="hidden text-lg font-semibold text-downbeat-text md:block">Presets</h2>
+    <h2 class="hidden text-lg font-semibold text-downbeat-text md:block">Presets ({{ presets.length }})</h2>
 
     <div class="flex gap-2">
       <button

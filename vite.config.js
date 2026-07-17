@@ -26,11 +26,24 @@ export default defineConfig({
     viteSingleFile(),
     VitePWA({
       registerType: 'autoUpdate',
-      includeAssets: ['icons/apple-touch-icon.png'],
+      // On enregistre le service worker nous-mêmes via le composable
+      // `virtual:pwa-register/vue` (voir useServiceWorkerUpdate.js) plutôt
+      // que via le script auto-injecté, pour pouvoir afficher un toast
+      // "nouvelle version disponible" côté app.
+      injectRegister: false,
+      includeAssets: [
+        'favicon.ico',
+        'icons/apple-touch-icon.png',
+        'icons/favicon-48.png',
+        'icons/favicon-32.png',
+        'icons/favicon-16.png',
+      ],
       manifest: {
+        id: '.',
         name: 'Downbeat',
         short_name: 'Downbeat',
         description: 'Métronome web pour groupe, utilisable hors ligne.',
+        lang: 'fr',
         theme_color: '#0b0c0e',
         background_color: '#0b0c0e',
         display: 'standalone',

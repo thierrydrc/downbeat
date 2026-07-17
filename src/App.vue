@@ -1,9 +1,17 @@
 <script setup>
-import { onMounted, onUnmounted, ref } from 'vue'
-import { mdiClose, mdiPlaylistMusic, mdiWeatherNight, mdiWeatherSunny } from '@mdi/js'
+import { computed, onMounted, onUnmounted, ref } from 'vue'
+import {
+  mdiChevronLeft,
+  mdiChevronRight,
+  mdiClose,
+  mdiPlaylistMusic,
+  mdiWeatherNight,
+  mdiWeatherSunny,
+} from '@mdi/js'
 import { useMetronome } from './composables/useMetronome.js'
 import { usePresets } from './composables/usePresets.js'
 import { useTheme } from './composables/useTheme.js'
+import { useServiceWorkerUpdate } from './composables/useServiceWorkerUpdate.js'
 import MetronomeDisplay from './components/MetronomeDisplay.vue'
 import MetronomeControls from './components/MetronomeControls.vue'
 import VolumeControl from './components/VolumeControl.vue'
@@ -30,8 +38,9 @@ const {
   loadPreset,
 } = useMetronome()
 
-const { addPreset, updatePreset } = usePresets()
+const { presets, addPreset, updatePreset } = usePresets()
 const { theme, toggleTheme } = useTheme()
+const { needRefresh, reload: reloadForUpdate, dismiss: dismissUpdate } = useServiceWorkerUpdate()
 
 const loadedPreset = ref(null)
 const isEditingPreset = ref(false)
@@ -43,9 +52,29 @@ function closeSidebar() {
   isSidebarOpen.value = false
 }
 
+function isEditableTarget(target) {
+  const tag = target?.tagName
+  return tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || target?.isContentEditable
+}
+
 function handleKeydown(event) {
   if (event.key === 'Escape' && isSidebarOpen.value) {
     closeSidebar()
+    return
+  }
+  // Espace/flèches ne doivent pas agir pendant la saisie d'un nom de preset,
+  // d'un tempo dans la modale d'ajout, etc.
+  if (isEditableTarget(event.target)) return
+
+  if (event.code === 'Space') {
+    event.preventDefault()
+    toggle()
+  } else if (event.key === 'ArrowUp' || event.key === 'ArrowRight') {
+    event.preventDefault()
+    incrementTempo(1)
+  } else if (event.key === 'ArrowDown' || event.key === 'ArrowLeft') {
+    event.preventDefault()
+    incrementTempo(-1)
   }
 }
 
@@ -72,6 +101,20 @@ function handleRemovePreset(id) {
   if (loadedPreset.value?.id === id) {
     deselectPreset()
   }
+}
+
+const currentPresetIndex = computed(() => {
+  if (!loadedPreset.value) return -1
+  return presets.value.findIndex((preset) => preset.id === loadedPreset.value.id)
+})
+const canGoPrevPreset = computed(() => currentPresetIndex.value > 0)
+const canGoNextPreset = computed(
+  () => currentPresetIndex.value !== -1 && currentPresetIndex.value < presets.value.length - 1,
+)
+
+function goToPreset(offset) {
+  const target = presets.value[currentPresetIndex.value + offset]
+  if (target) handleLoadPreset(target)
 }
 
 function handleSaveEdit() {
@@ -106,10 +149,9 @@ function handleSaveNewPreset() {
       <div class="mx-auto flex w-full max-w-3xl flex-1 flex-col gap-5">
         <header class="flex items-center justify-between gap-4 md:justify-center">
           <div class="md:text-center">
-            <h1 class="text-base font-bold tracking-tight">Downbeat</h1>
-            <p class="text-xs text-downbeat-text/50">Métronome hors ligne</p>
+            <h1 class="text-base font-bold tracking-tight">Down<span class="text-downbeat-accent">beat</span></h1>
           </div>
-          <div class="flex shrink-0 items-center gap-2">
+          <div class="flex shrink-0 items-center gap-2 md:hidden">
             <button
               type="button"
               class="rounded-lg border border-downbeat-panel-2 bg-downbeat-panel p-2.5 text-downbeat-text outline-none transition-colors motion-reduce:transition-none hover:bg-downbeat-panel-2 focus-visible:ring-2 focus-visible:ring-downbeat-accent"
@@ -120,7 +162,7 @@ function handleSaveNewPreset() {
             </button>
             <button
               type="button"
-              class="rounded-lg border border-downbeat-panel-2 bg-downbeat-panel p-2.5 text-downbeat-text outline-none transition-colors motion-reduce:transition-none hover:bg-downbeat-panel-2 focus-visible:ring-2 focus-visible:ring-downbeat-accent md:hidden"
+              class="rounded-lg border border-downbeat-panel-2 bg-downbeat-panel p-2.5 text-downbeat-text outline-none transition-colors motion-reduce:transition-none hover:bg-downbeat-panel-2 focus-visible:ring-2 focus-visible:ring-downbeat-accent"
               aria-label="Ouvrir la liste des presets"
               aria-controls="preset-sidebar"
               :aria-expanded="isSidebarOpen"
@@ -131,6 +173,18 @@ function handleSaveNewPreset() {
           </div>
         </header>
 
+        <!-- Desktop : la sidebar est toujours visible (pas de bouton pour
+        l'ouvrir), donc ce bouton vit hors du header centré, fixé contre son
+        bord gauche avec une petite marge. -->
+        <button
+          type="button"
+          class="hidden rounded-lg border border-downbeat-panel-2 bg-downbeat-panel p-2.5 text-downbeat-text outline-none transition-colors motion-reduce:transition-none hover:bg-downbeat-panel-2 focus-visible:ring-2 focus-visible:ring-downbeat-accent md:fixed md:right-84 md:top-5 md:z-20 md:flex"
+          :aria-label="theme === 'dark' ? 'Passer en mode clair' : 'Passer en mode sombre'"
+          @click="toggleTheme"
+        >
+          <MdiIcon :path="theme === 'dark' ? mdiWeatherSunny : mdiWeatherNight" class="h-6 w-6" />
+        </button>
+
         <main class="flex flex-1 flex-col items-center gap-4">
           <MetronomeDisplay
             :current-beat="currentBeat"
@@ -139,21 +193,45 @@ function handleSaveNewPreset() {
             @toggle="toggle"
           />
 
-          <div class="flex min-h-10 w-full max-w-md flex-col">
+          <div v-if="loadedPreset" class="flex w-full max-w-md flex-col">
             <template v-if="loadedPreset">
-              <div class="flex flex-col gap-0.5 rounded-xl bg-downbeat-panel px-3 py-2 shadow-sm">
-                <span class="text-[11px] text-downbeat-text/50">Preset chargé</span>
-                <div class="flex items-start justify-between gap-2">
+              <div class="flex items-center gap-1.5">
+                <button
+                  type="button"
+                  class="flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-downbeat-text/60 outline-none transition-colors motion-reduce:transition-none hover:text-downbeat-accent focus-visible:ring-2 focus-visible:ring-downbeat-accent disabled:pointer-events-none disabled:opacity-30"
+                  aria-label="Preset précédent"
+                  :disabled="!canGoPrevPreset"
+                  @click="goToPreset(-1)"
+                >
+                  <MdiIcon :path="mdiChevronLeft" class="h-5 w-5" />
+                </button>
+
+                <div class="flex min-w-0 flex-1 flex-col gap-0.5 rounded-xl bg-downbeat-panel px-3 py-2 shadow-sm">
+                  <div class="flex items-center justify-between gap-2">
+                    <span class="text-[11px] text-downbeat-text/50">
+                      Preset chargé · {{ currentPresetIndex + 1 }} sur {{ presets.length }}
+                    </span>
+                    <button
+                      type="button"
+                      class="flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-downbeat-text/60 outline-none transition-colors motion-reduce:transition-none hover:bg-downbeat-panel-2 hover:text-downbeat-accent focus-visible:ring-2 focus-visible:ring-downbeat-accent"
+                      aria-label="Désélectionner le preset"
+                      @click="deselectPreset"
+                    >
+                      <MdiIcon :path="mdiClose" class="h-4 w-4" />
+                    </button>
+                  </div>
                   <span class="break-words text-sm font-semibold text-downbeat-accent">{{ loadedPreset.name }}</span>
-                  <button
-                    type="button"
-                    class="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-downbeat-panel-2 text-downbeat-text/60 outline-none transition-colors motion-reduce:transition-none hover:bg-downbeat-panel-2/70 hover:text-downbeat-accent focus-visible:ring-2 focus-visible:ring-downbeat-accent"
-                    aria-label="Désélectionner le preset"
-                    @click="deselectPreset"
-                  >
-                    <MdiIcon :path="mdiClose" class="h-4 w-4" />
-                  </button>
                 </div>
+
+                <button
+                  type="button"
+                  class="flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-downbeat-text/60 outline-none transition-colors motion-reduce:transition-none hover:text-downbeat-accent focus-visible:ring-2 focus-visible:ring-downbeat-accent disabled:pointer-events-none disabled:opacity-30"
+                  aria-label="Preset suivant"
+                  :disabled="!canGoNextPreset"
+                  @click="goToPreset(1)"
+                >
+                  <MdiIcon :path="mdiChevronRight" class="h-5 w-5" />
+                </button>
               </div>
             </template>
           </div>
@@ -168,7 +246,24 @@ function handleSaveNewPreset() {
               @increment-tempo="incrementTempo"
               @tap-tempo="tapTempo"
               @set-beats-per-measure="setBeatsPerMeasure"
-            />
+            >
+              <button
+                v-if="loadedPreset && isEditingPreset"
+                type="button"
+                class="flex h-11 w-full items-center justify-center rounded-lg bg-downbeat-accent px-3 text-sm font-semibold text-downbeat-on-accent outline-none transition-colors motion-reduce:transition-none hover:brightness-110 focus-visible:ring-2 focus-visible:ring-downbeat-accent/50"
+                @click="handleSaveEdit"
+              >
+                Enregistrer
+              </button>
+              <button
+                v-if="!loadedPreset"
+                type="button"
+                class="flex h-11 w-full items-center justify-center rounded-lg bg-downbeat-accent px-3 text-sm font-semibold text-downbeat-on-accent outline-none transition-colors motion-reduce:transition-none hover:brightness-110 focus-visible:ring-2 focus-visible:ring-downbeat-accent/50"
+                @click="openSavePresetModal"
+              >
+                Enregistrer le preset
+              </button>
+            </MetronomeControls>
           </template>
           <template v-else>
             <div class="flex w-full max-w-md items-center justify-between rounded-2xl bg-downbeat-panel p-5 shadow-lg">
@@ -186,23 +281,6 @@ function handleSaveNewPreset() {
               </button>
             </div>
           </template>
-
-          <button
-            v-if="loadedPreset && isEditingPreset"
-            type="button"
-            class="flex h-11 w-full max-w-md items-center justify-center rounded-lg bg-downbeat-accent px-3 text-sm font-semibold text-downbeat-on-accent outline-none transition-colors motion-reduce:transition-none hover:brightness-110 focus-visible:ring-2 focus-visible:ring-downbeat-accent/50"
-            @click="handleSaveEdit"
-          >
-            Enregistrer
-          </button>
-          <button
-            v-if="!loadedPreset"
-            type="button"
-            class="flex h-11 w-full max-w-md items-center justify-center rounded-lg bg-downbeat-accent px-3 text-sm font-semibold text-downbeat-on-accent outline-none transition-colors motion-reduce:transition-none hover:brightness-110 focus-visible:ring-2 focus-visible:ring-downbeat-accent/50"
-            @click="openSavePresetModal"
-          >
-            Enregistrer le preset
-          </button>
 
           <VolumeControl
             :volume="volume"
@@ -226,7 +304,7 @@ function handleSaveNewPreset() {
       :class="isSidebarOpen ? 'translate-x-0' : 'translate-x-full'"
     >
       <div class="flex items-center justify-between p-4 md:hidden">
-        <span class="text-lg font-semibold">Presets</span>
+        <span class="text-lg font-semibold">Presets ({{ presets.length }})</span>
         <button
           type="button"
           class="flex h-10 w-10 items-center justify-center rounded-full text-downbeat-text/70 outline-none transition-colors motion-reduce:transition-none hover:text-downbeat-accent focus-visible:ring-2 focus-visible:ring-downbeat-accent"
@@ -264,5 +342,29 @@ function handleSaveNewPreset() {
         </button>
       </form>
     </Modal>
+
+    <div
+      v-if="needRefresh"
+      class="fixed inset-x-4 bottom-4 z-50 mx-auto flex max-w-sm items-center justify-between gap-3 rounded-xl bg-downbeat-panel px-4 py-3 shadow-xl ring-1 ring-downbeat-panel-2"
+      role="status"
+    >
+      <span class="text-sm text-downbeat-text">Nouvelle version disponible</span>
+      <div class="flex shrink-0 gap-1">
+        <button
+          type="button"
+          class="rounded-lg px-3 py-1.5 text-sm text-downbeat-text/60 outline-none transition-colors motion-reduce:transition-none hover:text-downbeat-text focus-visible:ring-2 focus-visible:ring-downbeat-accent"
+          @click="dismissUpdate"
+        >
+          Plus tard
+        </button>
+        <button
+          type="button"
+          class="rounded-lg bg-downbeat-accent px-3 py-1.5 text-sm font-semibold text-downbeat-on-accent outline-none transition-colors motion-reduce:transition-none hover:brightness-110 focus-visible:ring-2 focus-visible:ring-downbeat-accent/50"
+          @click="reloadForUpdate"
+        >
+          Recharger
+        </button>
+      </div>
+    </div>
   </div>
 </template>

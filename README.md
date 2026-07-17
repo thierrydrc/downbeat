@@ -33,9 +33,10 @@ Génère `dist/` (versionné dans le repo, pas de rebuild nécessaire pour le r�
 npm run icons
 ```
 
-Régénère `public/icons/*.png` depuis le logo source
-(`scripts/icon-sources/source-icon.svg`) via [sharp](https://sharp.pixelplumbing.com/). Pour
-changer de logo, éditez ce SVG (ou remplacez-le) puis relancez la commande.
+Régénère `public/icons/*.png` et `public/favicon.ico` depuis le logo source
+(`scripts/icon-sources/source-icon.png`, idéalement carré et en haute résolution) via
+[sharp](https://sharp.pixelplumbing.com/) et [png-to-ico](https://www.npmjs.com/package/png-to-ico).
+Pour changer de logo, remplacez ce PNG puis relancez la commande.
 
 ## Utiliser l'app hors ligne
 
@@ -71,7 +72,19 @@ Ajout via modale (nom, tempo, mesure), clic pour charger (reclic pour désélect
 glisser-déposer pour réordonner, export/import JSON (`⋮`). Un preset chargé masque les
 contrôles tempo/mesure au profit d'un rappel + bouton **Modifier** ; **Enregistrer** met à
 jour le preset. Sans preset chargé, **Enregistrer le preset** en crée un nouveau à partir du
-tempo/mesure courants.
+tempo/mesure courants. Les flèches ‹ › autour du preset chargé passent au précédent/suivant
+de la liste sans rouvrir le tiroir.
 
 Sauvegarde automatique dans le `localStorage` du navigateur (locale à l'appareil, ne se
 synchronise pas entre appareils).
+
+## Raccourcis clavier
+
+Espace : start/stop. Flèches haut/droite : +1 BPM. Flèches bas/gauche : -1 BPM. Échap : ferme
+le tiroir des presets. Inactifs pendant la saisie dans un champ texte.
+
+## Mises à jour (PWA)
+
+Le service worker installe les mises à jour en arrière-plan ; un bandeau "Nouvelle version
+disponible" apparaît quand une nouvelle version est prête, avec un bouton pour recharger et
+l'activer immédiatement.

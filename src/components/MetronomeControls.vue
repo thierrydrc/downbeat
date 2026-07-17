@@ -81,5 +81,7 @@ const emit = defineEmits(['set-tempo', 'increment-tempo', 'tap-tempo', 'set-beat
         </button>
       </div>
     </div>
+
+    <slot />
   </div>
 </template>
