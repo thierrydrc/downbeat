@@ -25,12 +25,10 @@ export default defineConfig({
     tailwindcss(),
     viteSingleFile(),
     VitePWA({
+      // Le nouveau service worker s'active tout seul, immédiatement et
+      // silencieusement, dès qu'une nouvelle version est détectée - pas de
+      // confirmation à demander à l'utilisateur.
       registerType: 'autoUpdate',
-      // On enregistre le service worker nous-mêmes via le composable
-      // `virtual:pwa-register/vue` (voir useServiceWorkerUpdate.js) plutôt
-      // que via le script auto-injecté, pour pouvoir afficher un toast
-      // "nouvelle version disponible" côté app.
-      injectRegister: false,
       includeAssets: [
         'favicon.ico',
         'icons/apple-touch-icon.png',

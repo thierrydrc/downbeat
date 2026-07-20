@@ -87,9 +87,8 @@ le tiroir des presets. Inactifs pendant la saisie dans un champ texte.
 
 ## Mises à jour (PWA)
 
-Le service worker installe les mises à jour en arrière-plan ; un bandeau "Nouvelle version
-disponible" apparaît quand une nouvelle version est prête, avec un bouton pour recharger et
-l'activer immédiatement.
+Le service worker installe et active les mises à jour automatiquement en arrière-plan, sans
+action requise — elles sont visibles à la prochaine ouverture de l'app.
 
 ## Licence
 

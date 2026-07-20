@@ -12,7 +12,6 @@ import {
 import { useMetronome } from './composables/useMetronome.js'
 import { usePresets } from './composables/usePresets.js'
 import { useTheme } from './composables/useTheme.js'
-import { useServiceWorkerUpdate } from './composables/useServiceWorkerUpdate.js'
 import { version, repository } from '../package.json'
 import MetronomeDisplay from './components/MetronomeDisplay.vue'
 import MetronomeControls from './components/MetronomeControls.vue'
@@ -44,7 +43,6 @@ const {
 
 const { presets, addPreset, updatePreset } = usePresets()
 const { theme, toggleTheme } = useTheme()
-const { needRefresh, reload: reloadForUpdate, dismiss: dismissUpdate } = useServiceWorkerUpdate()
 
 const loadedPreset = ref(null)
 const isEditingPreset = ref(false)
@@ -359,29 +357,5 @@ function handleSaveNewPreset() {
         </button>
       </form>
     </Modal>
-
-    <div
-      v-if="needRefresh"
-      class="fixed inset-x-4 bottom-4 z-50 mx-auto flex max-w-sm items-center justify-between gap-3 rounded-xl bg-downbeat-panel px-4 py-3 shadow-xl ring-1 ring-downbeat-panel-2"
-      role="status"
-    >
-      <span class="text-sm text-downbeat-text">Nouvelle version disponible</span>
-      <div class="flex shrink-0 gap-1">
-        <button
-          type="button"
-          class="rounded-lg px-3 py-1.5 text-sm text-downbeat-text/60 outline-none transition-colors motion-reduce:transition-none hover:text-downbeat-text focus-visible:ring-2 focus-visible:ring-downbeat-accent"
-          @click="dismissUpdate"
-        >
-          Plus tard
-        </button>
-        <button
-          type="button"
-          class="rounded-lg bg-downbeat-accent px-3 py-1.5 text-sm font-semibold text-downbeat-on-accent outline-none transition-colors motion-reduce:transition-none hover:brightness-110 focus-visible:ring-2 focus-visible:ring-downbeat-accent/50"
-          @click="reloadForUpdate"
-        >
-          Recharger
-        </button>
-      </div>
-    </div>
   </div>
 </template>
