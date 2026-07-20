@@ -53,7 +53,9 @@ en HTTPS (GitHub Pages).
 Depuis <https://thierrydrc.github.io/DownBeat/> :
 
 - **Chrome / Android** : bannière d'installation, ou menu **⋮** → **Installer l'application**.
-- **Safari / iOS** : **Partager** → **Sur l'écran d'accueil**.
+- **iPhone / iPad** : uniquement via **Safari** (contrainte Apple : tous les navigateurs iOS,
+  y compris Chrome, utilisent le moteur de Safari mais seul Safari a accès à l'installation
+  de PWA). Ouvrir le lien dans Safari, puis **Partager** → **Sur l'écran d'accueil**.
 
 ## Volume et « Boost scène »
 
@@ -88,3 +90,7 @@ le tiroir des presets. Inactifs pendant la saisie dans un champ texte.
 Le service worker installe les mises à jour en arrière-plan ; un bandeau "Nouvelle version
 disponible" apparaît quand une nouvelle version est prête, avec un bouton pour recharger et
 l'activer immédiatement.
+
+## Licence
+
+[MIT](LICENSE)

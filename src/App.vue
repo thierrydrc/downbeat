@@ -4,6 +4,7 @@ import {
   mdiChevronLeft,
   mdiChevronRight,
   mdiClose,
+  mdiGithub,
   mdiPlaylistMusic,
   mdiWeatherNight,
   mdiWeatherSunny,
@@ -12,12 +13,15 @@ import { useMetronome } from './composables/useMetronome.js'
 import { usePresets } from './composables/usePresets.js'
 import { useTheme } from './composables/useTheme.js'
 import { useServiceWorkerUpdate } from './composables/useServiceWorkerUpdate.js'
+import { version, repository } from '../package.json'
 import MetronomeDisplay from './components/MetronomeDisplay.vue'
 import MetronomeControls from './components/MetronomeControls.vue'
 import VolumeControl from './components/VolumeControl.vue'
 import PresetList from './components/PresetList.vue'
 import Modal from './components/Modal.vue'
 import MdiIcon from './components/MdiIcon.vue'
+
+const repositoryUrl = repository.url.replace(/\.git$/, '')
 
 const {
   isPlaying,
@@ -289,6 +293,19 @@ function handleSaveNewPreset() {
             @set-boost="setBoost"
           />
         </main>
+
+        <footer class="flex items-center justify-center gap-1.5 pb-1 text-[11px] text-downbeat-text/30">
+          <span>v{{ version }}</span>
+          <a
+            :href="repositoryUrl"
+            target="_blank"
+            rel="noopener noreferrer"
+            class="text-downbeat-text/30 outline-none transition-colors motion-reduce:transition-none hover:text-downbeat-text/60 focus-visible:ring-2 focus-visible:ring-downbeat-accent"
+            aria-label="Voir le projet sur GitHub"
+          >
+            <MdiIcon :path="mdiGithub" class="h-3.5 w-3.5" />
+          </a>
+        </footer>
       </div>
     </div>
 
