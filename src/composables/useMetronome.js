@@ -1,37 +1,65 @@
-import { ref, onUnmounted } from 'vue'
+import { ref, watch, onUnmounted } from 'vue'
 
-// Scheduler "lookahead" (technique du double clock, cf. "A Tale of Two Clocks" -
-// Chris Wilson). Le timing réel du clic est piloté par audioContext.currentTime,
-// jamais par le cycle de rendu de Vue : une boucle setTimeout courte planifie les
-// sons en avance sur l'horloge audio pour absorber la latence/dérive de setTimeout.
+// Lookahead scheduler (double-clock technique, cf. "A Tale of Two Clocks" -
+// Chris Wilson). Click timing is driven by audioContext.currentTime, never
+// by Vue's render cycle: a short setTimeout loop schedules sound ahead of
+// the audio clock to absorb setTimeout's latency/drift.
 const LOOKAHEAD_MS = 25
 const SCHEDULE_AHEAD_TIME = 0.1
 const CLICK_DURATION = 0.05
-// Un simple pic instantané qui redescend aussitôt ne contient presque aucune
-// énergie (quelques ms au-dessus de 0 dBFS) : même avec un gain > 1 et un
-// limiteur derrière, il n'y a quasiment rien à "pousser" vers le plafond, donc
-// le volume perçu ne bouge presque pas entre 100% et 400%. Ce plateau force
-// le clic à rester à pleine amplitude un court instant avant de redescendre,
-// ce qui donne au limiteur une vraie plage à comprimer/pousser vers le
-// plafond quand le gain augmente - c'est ça, plus que le gain seul, qui rend
-// le clic perceptiblement plus fort à volume élevé.
+// A bare instant peak has almost no energy above 0 dBFS for the limiter to
+// compress, so perceived loudness barely moves between 100% and 400% gain.
+// Holding full amplitude for a short plateau first gives the limiter an
+// actual range to push toward the ceiling as gain increases.
 const CLICK_SUSTAIN = 0.008
 
 export const MIN_TEMPO = 30
 export const MAX_TEMPO = 240
 
-// Le volume "normal" (slider) reste dans la plage naturelle 0-1 (0-100%,
-// gain unitaire max = 0 dBFS). Le boost scène est un choix explicite et
-// séparé (case à cocher), pas un point sur un slider continu - on autorise
-// alors un gain > 1 et on s'appuie sur un limiteur en aval pour absorber le
-// dépassement de 0 dBFS que ça provoquerait sinon, sans distorsion audible.
-// À noter : ce boost ne peut agir que sur le signal numérique envoyé au
-// système - il ne peut pas dépasser le plafond physique de la sortie casque/
-// ligne de l'appareil, ni contourner un éventuel limiteur matériel/OS.
+// Normal volume (slider) stays in the natural 0-1 range (0-100%, unity gain
+// = 0 dBFS). Line input boost is a separate explicit toggle rather than a
+// point further up the slider: it allows gain > 1, relying on a limiter
+// downstream to absorb the resulting overshoot past 0 dBFS without audible
+// distortion. Note this can't exceed the device's physical output ceiling
+// or bypass any hardware/OS limiter.
 const BOOST_FACTOR = 4
 
 const TAP_MAX_INTERVALS = 8
 const TAP_TIMEOUT_MS = 2000
+
+// Silent looping track played alongside the click. A genuinely playing
+// <audio> element makes the browser/OS treat the app as active media
+// playback (lock-screen controls via Media Session, and on iOS Safari,
+// bypasses the ringer/silent switch) - a bare AudioContext doesn't get that
+// treatment. Generated in memory rather than a public/ file to stay
+// compatible with the single-file bundle (viteSingleFile) and file:// use.
+function createSilentLoopUrl() {
+  const sampleRate = 8000
+  const dataSize = 400 * 2 // 50ms of 16-bit mono, enough to loop seamlessly
+
+  const buffer = new ArrayBuffer(44 + dataSize)
+  const view = new DataView(buffer)
+  const writeString = (offset, str) => {
+    for (let i = 0; i < str.length; i++) view.setUint8(offset + i, str.charCodeAt(i))
+  }
+
+  writeString(0, 'RIFF')
+  view.setUint32(4, 36 + dataSize, true)
+  writeString(8, 'WAVE')
+  writeString(12, 'fmt ')
+  view.setUint32(16, 16, true)
+  view.setUint16(20, 1, true) // PCM
+  view.setUint16(22, 1, true) // mono
+  view.setUint32(24, sampleRate, true)
+  view.setUint32(28, sampleRate * 2, true) // byte rate
+  view.setUint16(32, 2, true) // block align
+  view.setUint16(34, 16, true) // bits per sample
+  writeString(36, 'data')
+  view.setUint32(40, dataSize, true)
+  // Rest of the buffer stays zeroed by default: silence.
+
+  return URL.createObjectURL(new Blob([buffer], { type: 'audio/wav' }))
+}
 
 export function useMetronome() {
   const isPlaying = ref(false)
@@ -45,15 +73,16 @@ export function useMetronome() {
   let masterGain = null
   let limiter = null
   let wakeLockSentinel = null
+  let keepAliveAudio = null
 
   let nextNoteTime = 0
   let currentBeatNumber = 0
   let schedulerTimerId = null
   let rafId = null
 
-  // Temps réel restant hors réactivité Vue : beats déjà planifiés dans
-  // audioContext mais pas encore "arrivés" côté horloge, pour synchroniser
-  // l'affichage via requestAnimationFrame plutôt que de dériver du scheduler.
+  // Beats already scheduled in the AudioContext but not yet "arrived" on the
+  // clock, so the display can sync via requestAnimationFrame instead of
+  // deriving from the scheduler.
   const scheduledBeats = []
 
   let tapTimes = []
@@ -65,9 +94,8 @@ export function useMetronome() {
       masterGain = audioCtx.createGain()
       masterGain.gain.value = volume.value * (boostEnabled.value ? BOOST_FACTOR : 1)
 
-      // Limiteur agressif mais propre : absorbe le dépassement de 0 dBFS
-      // provoqué par un gain > 1 (boost au-delà de l'unité) sans laisser
-      // passer de distorsion audible qui dénaturerait le clic.
+      // Aggressive but clean limiter: absorbs the 0 dBFS overshoot caused by
+      // gain > 1 (boost) without letting audible distortion through.
       limiter = audioCtx.createDynamicsCompressor()
       limiter.threshold.value = -3
       limiter.knee.value = 0
@@ -83,16 +111,47 @@ export function useMetronome() {
     }
   }
 
+  function ensureKeepAliveAudio() {
+    if (!keepAliveAudio) {
+      keepAliveAudio = new Audio(createSilentLoopUrl())
+      keepAliveAudio.loop = true
+      keepAliveAudio.setAttribute('playsinline', '')
+    }
+    // Must stay synchronous within the user gesture (START click) for
+    // autoplay policies to allow it.
+    keepAliveAudio.play().catch(() => {})
+  }
+
+  function updateMediaSessionMetadata() {
+    if (!('mediaSession' in navigator)) return
+    navigator.mediaSession.metadata = new MediaMetadata({
+      title: 'downbeat',
+      artist: `${tempo.value} BPM`,
+      artwork: [
+        { src: 'icons/icon-192.png', sizes: '192x192', type: 'image/png' },
+        { src: 'icons/icon-512.png', sizes: '512x512', type: 'image/png' },
+      ],
+    })
+  }
+
+  // Play/pause controls the browser surfaces on the lock screen/notifications
+  // - wired to start/stop so they work without unlocking the phone.
+  function setupMediaSession() {
+    if (!('mediaSession' in navigator)) return
+    navigator.mediaSession.setActionHandler('play', start)
+    navigator.mediaSession.setActionHandler('pause', stop)
+    navigator.mediaSession.setActionHandler('stop', stop)
+  }
+
   function scheduleClick(beatNumber, time) {
     const osc = audioCtx.createOscillator()
     const envelope = audioCtx.createGain()
 
     const isDownbeat = beatNumber === 0
-    // Carrée plutôt que sinusoïdale : à amplitude de crête égale, une onde
-    // carrée transporte nettement plus d'énergie (RMS proche du pic, contre
-    // ~70% pour une sinusoïdale), donc un son perçu comme plus fort sans
-    // dépasser 0 dBFS ni ajouter de distorsion (c'est une forme d'onde
-    // propre, pas un signal saturé).
+    // Square rather than sine: at equal peak amplitude, a square wave
+    // carries much more energy (RMS close to peak, vs ~70% for a sine),
+    // so it's perceived louder without exceeding 0 dBFS or adding
+    // distortion (it's a clean waveform, not a clipped one).
     osc.type = 'square'
     osc.frequency.value = isDownbeat ? 1500 : 1000
 
@@ -124,9 +183,9 @@ export function useMetronome() {
     schedulerTimerId = setTimeout(scheduler, LOOKAHEAD_MS)
   }
 
-  // Boucle d'affichage : compare l'horloge audio réelle au temps des beats déjà
-  // planifiés pour mettre à jour l'état réactif exposé aux composants. C'est la
-  // seule chose que Vue a le droit de piloter : l'affichage, pas le timing.
+  // Display loop: compares the real audio clock to already-scheduled beat
+  // times to update the reactive state exposed to components. This is the
+  // only thing Vue is allowed to drive - the display, not the timing.
   function visualSync() {
     if (audioCtx) {
       const now = audioCtx.currentTime
@@ -138,17 +197,17 @@ export function useMetronome() {
     rafId = requestAnimationFrame(visualSync)
   }
 
-  // Empêche l'écran de se verrouiller tant que le métronome joue - un usage
-  // scène typique n'implique pas de retoucher l'écran pendant plusieurs
-  // minutes, et un verrouillage peut suspendre l'AudioContext (surtout sur
-  // iOS Safari) et arrêter le clic silencieusement en plein morceau.
+  // Keeps the screen from locking while the metronome runs - typical stage
+  // use means the screen goes untouched for minutes, and locking can
+  // suspend the AudioContext (especially on iOS Safari), silently killing
+  // the click mid-song.
   async function acquireWakeLock() {
     if (!('wakeLock' in navigator)) return
     try {
       wakeLockSentinel = await navigator.wakeLock.request('screen')
     } catch {
-      // Refusé (économie d'énergie, onglet caché...) : non bloquant, le
-      // métronome continue de fonctionner sans le verrou d'écran.
+      // Denied (power saving, hidden tab...): non-blocking, the metronome
+      // keeps running without the screen lock.
       wakeLockSentinel = null
     }
   }
@@ -157,29 +216,33 @@ export function useMetronome() {
     try {
       await wakeLockSentinel?.release()
     } catch {
-      // rien à faire
+      // nothing to do
     }
     wakeLockSentinel = null
   }
 
-  // Le wake lock est automatiquement relâché par le navigateur quand l'onglet
-  // passe en arrière-plan, et l'AudioContext peut être suspendu (appel,
-  // notification, mise en veille...). On relance les deux au retour au
-  // premier plan pour que le métronome ne reste pas silencieux sans que
-  // l'utilisateur s'en rende compte.
+  // The browser auto-releases the wake lock when the tab backgrounds, and
+  // the AudioContext can get suspended (call, notification, sleep...).
+  // Both are restarted on return to foreground so the metronome doesn't go
+  // silent without the user noticing.
   function handleVisibilityChange() {
     if (document.visibilityState !== 'visible' || !isPlaying.value) return
     if (audioCtx?.state === 'suspended') {
       audioCtx.resume()
     }
+    if (keepAliveAudio?.paused) {
+      keepAliveAudio.play().catch(() => {})
+    }
     acquireWakeLock()
   }
 
   document.addEventListener('visibilitychange', handleVisibilityChange)
+  setupMediaSession()
 
   function start() {
     if (isPlaying.value) return
     ensureAudioContext()
+    ensureKeepAliveAudio()
     currentBeatNumber = 0
     nextNoteTime = audioCtx.currentTime + 0.05
     scheduledBeats.length = 0
@@ -187,6 +250,8 @@ export function useMetronome() {
     scheduler()
     rafId = requestAnimationFrame(visualSync)
     acquireWakeLock()
+    updateMediaSessionMetadata()
+    if ('mediaSession' in navigator) navigator.mediaSession.playbackState = 'playing'
   }
 
   function stop() {
@@ -202,6 +267,8 @@ export function useMetronome() {
     scheduledBeats.length = 0
     currentBeat.value = -1
     releaseWakeLock()
+    keepAliveAudio?.pause()
+    if ('mediaSession' in navigator) navigator.mediaSession.playbackState = 'paused'
   }
 
   function toggle() {
@@ -216,6 +283,10 @@ export function useMetronome() {
     const rounded = Math.round(bpm)
     tempo.value = Math.min(MAX_TEMPO, Math.max(MIN_TEMPO, rounded))
   }
+
+  watch(tempo, () => {
+    if (isPlaying.value) updateMediaSessionMetadata()
+  })
 
   function incrementTempo(delta) {
     setTempo(tempo.value + delta)
@@ -270,6 +341,7 @@ export function useMetronome() {
   onUnmounted(() => {
     stop()
     document.removeEventListener('visibilitychange', handleVisibilityChange)
+    keepAliveAudio?.remove()
   })
 
   return {

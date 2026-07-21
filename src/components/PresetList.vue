@@ -76,8 +76,8 @@ function handleImportClick() {
   triggerImport()
 }
 
-// Réordonnancement au doigt/souris via Pointer Events (l'API HTML5
-// dragstart/dragover ne fonctionne pas sur écran tactile).
+// Touch/mouse reordering via Pointer Events (the HTML5 dragstart/dragover
+// API doesn't work on touchscreens).
 const draggedId = ref(null)
 
 function startDrag(preset, event) {

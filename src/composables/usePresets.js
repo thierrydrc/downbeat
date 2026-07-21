@@ -2,8 +2,8 @@ import { ref, watch } from 'vue'
 import { MIN_TEMPO, MAX_TEMPO } from './useMetronome.js'
 
 const STORAGE_KEY = 'downbeat.presets.v1'
-// Ancienne clé (héritage du nom "songs") : migrée une fois vers STORAGE_KEY
-// puis supprimée, pour ne pas perdre les presets déjà enregistrés.
+// Old key (leftover from the "songs" name): migrated once to STORAGE_KEY
+// then removed, to avoid losing already-saved presets.
 const LEGACY_STORAGE_KEY = 'downbeat.songs.v1'
 
 function loadFromStorage() {
@@ -35,10 +35,9 @@ function makeId() {
     : `${Date.now()}-${Math.random().toString(36).slice(2)}`
 }
 
-// Bornes alignées sur ce que l'UI permet réellement de régler (slider tempo
-// 30-240, mesure 3/4 ou 4/4) : sans ça, un preset importé depuis un JSON
-// trafiqué à la main pourrait stocker (et afficher dans la liste) un tempo
-// ou une mesure que l'app elle-même ne permet jamais d'atteindre.
+// Bounds matched to what the UI actually allows (tempo slider 30-240, 3/4
+// or 4/4 only): otherwise a preset imported from a hand-edited JSON could
+// store (and display) a tempo or time signature the app itself never allows.
 function clampTempo(value) {
   return Math.min(MAX_TEMPO, Math.max(MIN_TEMPO, Math.round(value)))
 }
@@ -56,12 +55,12 @@ function normalizeEntry(entry) {
   return { id: makeId(), name, tempo: clampTempo(tempo), beatsPerMeasure: clampBeatsPerMeasure(beatsPerMeasure) }
 }
 
-// État au niveau du module (et non à l'intérieur de usePresets()) : plusieurs
-// composants (App.vue, PresetList.vue) appellent usePresets() et doivent
-// partager la même liste réactive, pas des copies indépendantes.
+// Module-level state (not inside usePresets()): multiple components
+// (App.vue, PresetList.vue) call usePresets() and need to share the same
+// reactive list, not independent copies.
 const presets = ref(loadFromStorage())
 
-// Persistance = donnée, pas timing : un watcher Vue classique convient ici.
+// Persistence is about data, not timing: a plain Vue watcher is fine here.
 watch(
   presets,
   (value) => {

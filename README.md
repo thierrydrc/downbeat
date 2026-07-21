@@ -1,18 +1,18 @@
 # Downbeat
 
-Métronome web pour groupe : start/stop, mesures 4/4 et 3/4, tap tempo, volume, presets
-(tempo + mesure) sauvegardés localement (réordonnables, exportables/importables en JSON), et
-thème clair/sombre.
+Web metronome for bands: start/stop, 4/4 and 3/4 time signatures, tap tempo, volume, presets
+(tempo + time signature) saved locally (reorderable, exportable/importable as JSON), and
+light/dark theme.
 
-Fonctionne **hors ligne**, en `file://` (dossier `dist/`) ou installé comme PWA.
+Works **offline**, over `file://` (the `dist/` folder) or installed as a PWA.
 
 ## Stack
 
-Vue 3 + Vite (`vite-plugin-singlefile` pour le `file://`, `vite-plugin-pwa` pour
-l'installation/l'offline), Tailwind CSS v4, icônes [MDI](https://materialdesignicons.com/)
-via `@mdi/js`.
+Vue 3 + Vite (`vite-plugin-singlefile` for `file://` support, `vite-plugin-pwa` for
+install/offline support), Tailwind CSS v4, [MDI](https://materialdesignicons.com/) icons via
+`@mdi/js`.
 
-## Développement
+## Development
 
 ```bash
 npm install
@@ -25,71 +25,80 @@ npm run dev
 npm run build
 ```
 
-Génère `dist/` (versionné dans le repo, pas de rebuild nécessaire pour le récupérer tel quel).
+Generates `dist/` (checked into the repo, no rebuild needed to fetch it as-is).
 
-## Icônes
+## Icons
 
 ```bash
 npm run icons
 ```
 
-Régénère `public/icons/*.png` et `public/favicon.ico` depuis le logo source
-(`scripts/icon-sources/source-icon.png`, idéalement carré et en haute résolution) via
-[sharp](https://sharp.pixelplumbing.com/) et [png-to-ico](https://www.npmjs.com/package/png-to-ico).
-Pour changer de logo, remplacez ce PNG puis relancez la commande.
+Regenerates `public/icons/*.png` and `public/favicon.ico` from the source logo
+(`scripts/icon-sources/source-icon.png`, ideally square and high-resolution) using
+[sharp](https://sharp.pixelplumbing.com/) and [png-to-ico](https://www.npmjs.com/package/png-to-ico).
+To change the logo, replace this PNG and rerun the command.
 
-## Utiliser l'app hors ligne
+## Using the app offline
 
-Ouvrez `dist/index.html` directement dans un navigateur (double-clic, ou glisser-déposer) :
-tout le JS/CSS est inliné (`vite-plugin-singlefile`), aucun serveur requis. Si ça échoue sur
-un appareil particulier : `npx serve dist`.
+Open `dist/index.html` directly in a browser (double-click, or drag-and-drop): all JS/CSS is
+inlined (`vite-plugin-singlefile`), no server required. If that fails on a particular device:
+`npx serve dist`.
 
-Le manifest PWA, le service worker et les icônes restent des fichiers séparés dans `dist/`
-(non inlinés) : sans effet en `file://`, ils permettent l'installation en PWA une fois servis
-en HTTPS (GitHub Pages).
+The PWA manifest, service worker and icons remain separate files in `dist/` (not inlined): no
+effect over `file://`, but they enable PWA installation once served over HTTPS (GitHub Pages).
 
-## Installer l'app
+## Installing the app
 
-Depuis <https://thierrydrc.github.io/DownBeat/> :
+From <https://thierrydrc.github.io/DownBeat/>:
 
-- **Chrome / Android** : bannière d'installation, ou menu **⋮** → **Installer l'application**.
-- **iPhone / iPad** : uniquement via **Safari** (contrainte Apple : tous les navigateurs iOS,
-  y compris Chrome, utilisent le moteur de Safari mais seul Safari a accès à l'installation
-  de PWA). Ouvrir le lien dans Safari, puis **Partager** → **Sur l'écran d'accueil**.
+- **Chrome / Android**: install banner, or **⋮** menu → **Install app**.
+- **iPhone / iPad**: only via **Safari** (Apple constraint: every iOS browser, including
+  Chrome, runs on Safari's engine, but only Safari has access to PWA installation). Open the
+  link in Safari, then **Share** → **Add to Home Screen**.
 
-## Volume et « Boost scène »
+## Volume and "Line Input Boost"
 
-Le slider de volume va de 0 à 100 %. La case **Boost scène** (sous le slider) amplifie le
-signal au-delà de 100 % avec un limiteur anti-saturation, pour une sortie casque/ligne vers
-une console. Résultat réel dépendant du plafond matériel de l'appareil — à tester en
-conditions réelles. Pensez aussi à monter le volume système de l'appareil au maximum.
+The volume slider goes from 0 to 100%. The **Line Input Boost** checkbox (below the slider)
+amplifies the signal beyond 100% with an anti-clipping limiter, for a headphone/line output
+into a mixing console. Actual result depends on the device's hardware output ceiling — test
+under real conditions. Also turn the device's system volume all the way up.
 
-Tant que le métronome joue, l'app empêche l'écran de se verrouiller (Wake Lock API) et
-relance automatiquement l'audio s'il a été suspendu (mise en veille, appel...) au retour au
-premier plan — utile en concert, où l'écran n'est pas retouché pendant plusieurs minutes.
+While the metronome is running, the app keeps the screen from locking (Wake Lock API) and
+automatically resumes audio if it was suspended (device sleep, phone call...) when coming back
+to the foreground — useful on stage, where the screen isn't touched for several minutes at a
+time.
+
+The app also plays a silent looping track alongside the click and registers a
+[Media Session](https://developer.mozilla.org/en-US/docs/Web/API/Media_Session_API), so the OS
+treats it as active media playback: play/pause controls on the lock screen/notifications, and
+on iOS, sound isn't muted by the ringer/silent switch the way plain Web Audio output normally
+would be. Note: on iOS, a plain web app (even installed to the home screen) may still stop
+audio when the screen is manually locked — this is a Safari platform limitation that no web
+API can fully work around; only a native wrapper (e.g. Capacitor) with background audio
+capabilities can guarantee it.
 
 ## Presets
 
-Ajout via modale (nom, tempo, mesure), clic pour charger (reclic pour désélectionner),
-glisser-déposer pour réordonner, export/import JSON (`⋮`). Un preset chargé masque les
-contrôles tempo/mesure au profit d'un rappel + bouton **Modifier** ; **Enregistrer** met à
-jour le preset. Sans preset chargé, **Enregistrer le preset** en crée un nouveau à partir du
-tempo/mesure courants. Les flèches ‹ › autour du preset chargé passent au précédent/suivant
-de la liste sans rouvrir le tiroir.
+Add via modal (name, tempo, time signature), click to load (click again to deselect),
+drag-and-drop to reorder, JSON export/import (`⋮`). A loaded preset hides the tempo/time
+signature controls in favor of a summary + **Edit** button; **Save** updates the preset.
+With no preset loaded, **Save preset** creates a new one from the current tempo/time
+signature. The ‹ › arrows around the loaded preset jump to the previous/next one in the list
+without reopening the drawer.
 
-Sauvegarde automatique dans le `localStorage` du navigateur (locale à l'appareil, ne se
-synchronise pas entre appareils).
+Automatically saved to the browser's `localStorage` (local to the device, does not sync across
+devices).
 
-## Raccourcis clavier
+## Keyboard shortcuts
 
-Espace : start/stop. Flèches haut/droite : +1 BPM. Flèches bas/gauche : -1 BPM. Échap : ferme
-le tiroir des presets. Inactifs pendant la saisie dans un champ texte.
+Space: start/stop. Up/Right arrows: +1 BPM. Down/Left arrows: -1 BPM. Escape: closes the preset
+drawer. Inactive while typing in a text field.
 
-## Mises à jour (PWA)
+## Updates (PWA)
 
-Le service worker installe et active les mises à jour automatiquement en arrière-plan, sans
-action requise — elles sont visibles à la prochaine ouverture de l'app.
+The service worker installs and activates updates automatically in the background, no action
+required — visible the next time the app is opened.
 
-## Licence
+## License
 
 [MIT](LICENSE)

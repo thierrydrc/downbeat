@@ -2,31 +2,39 @@
 
 @theme {
   --color-downbeat-bg: #0b0c0e;
-  --color-downbeat-panel: #111215;
-  --color-downbeat-panel-2: #17181b;
+  --color-downbeat-panel: #1b1d22;
+  --color-downbeat-panel-2: #24262c;
   --color-downbeat-accent: #ff5a36;
   --color-downbeat-offbeat: #3e8fb0;
   --color-downbeat-text: #ededec;
-  /* Couleur du texte affiché SUR un fond accent (boutons "Ajouter",
-     "Enregistrer"...) - un token dédié plutôt que réutiliser downbeat-bg,
-     car les deux n'ont plus de raison de coïncider en thème clair (voir
-     l'override [data-theme="light"] ci-dessous). */
+  /* Text color on top of an accent background - dedicated token since it no
+     longer matches downbeat-bg in the light theme override below. */
   --color-downbeat-on-accent: #0b0c0e;
+  /* Inactive outline/dots gray, kept separate from panel-2 to stay visible. */
+  --color-downbeat-outline: #75797f;
+  /* Beat flash/dots: same hue as accent/offbeat here, but a dedicated token
+     because the light theme needs a different value below (see override). */
+  --color-downbeat-beat-down: #ff5a36;
+  --color-downbeat-beat-off: #3e8fb0;
 }
 
-/* Thème clair : pas un simple négatif du thème sombre. L'accent #ff5a36 n'a
-   que ~3.1:1 de contraste sur blanc (sous le seuil AA 4.5:1) - on l'assombrit
-   légèrement pour rester lisible, ce qui impose aussi de repasser le texte
-   sur accent en blanc plutôt qu'en texte sombre (qui retomberait à ~3.6:1).
-   Même logique pour le bleu "offbeat", trop pâle sur blanc tel quel. */
+/* Light theme isn't just a dark-theme negative: #ff5a36 only hits ~3.1:1
+   contrast on white (below the 4.5:1 AA threshold), so it's darkened here,
+   which also flips on-accent text to white. Same reasoning for "offbeat"
+   blue, too pale on white as-is. */
 :root[data-theme='light'] {
-  --color-downbeat-bg: #f6f6f4;
+  --color-downbeat-bg: #f3f4f7;
   --color-downbeat-panel: #ffffff;
-  --color-downbeat-panel-2: #eceae7;
+  --color-downbeat-panel-2: #e7e9ef;
   --color-downbeat-accent: #cc3e1c;
   --color-downbeat-offbeat: #2f6f8c;
-  --color-downbeat-text: #17181b;
+  --color-downbeat-text: #171a20;
   --color-downbeat-on-accent: #ffffff;
+  /* accent/offbeat above are darkened to carry white text at AA contrast;
+     that makes them muddy as pure graphical fills. These stay vivid since
+     the beat flash/dots never have text on top (only need 3:1, not 4.5:1). */
+  --color-downbeat-beat-down: #e8481c;
+  --color-downbeat-beat-off: #3a86ab;
 }
 
 html {
@@ -40,10 +48,10 @@ html[data-theme='light'] {
 body {
   background-color: var(--color-downbeat-bg);
   color: var(--color-downbeat-text);
-  /* iOS Safari ignore `user-scalable=no` dans le viewport (accessibilité) :
-     sans ça, double-taper vite sur un bouton (ex. +/- tempo) déclenche un
-     zoom natif malgré la balise meta. `touch-action` bloque ce geste au
-     niveau CSS, respecté par Safari contrairement au viewport seul. */
+  /* iOS Safari ignores `user-scalable=no` in the viewport meta (a11y
+     requirement), so a fast double-tap on a button (e.g. tempo +/-) still
+     triggers native zoom. `touch-action` blocks that gesture at the CSS
+     level instead, which Safari does respect. */
   touch-action: manipulation;
 }
 

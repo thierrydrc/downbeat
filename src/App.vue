@@ -64,8 +64,8 @@ function handleKeydown(event) {
     closeSidebar()
     return
   }
-  // Espace/flèches ne doivent pas agir pendant la saisie d'un nom de preset,
-  // d'un tempo dans la modale d'ajout, etc.
+  // Space/arrows shouldn't fire while typing a preset name, a tempo in the
+  // add modal, etc.
   if (isEditableTarget(event.target)) return
 
   if (event.code === 'Space') {
@@ -151,7 +151,7 @@ function handleSaveNewPreset() {
       <div class="mx-auto flex w-full max-w-3xl flex-1 flex-col gap-5">
         <header class="flex items-center justify-between gap-4 md:justify-center">
           <div class="md:text-center">
-            <h1 class="text-base font-bold tracking-tight">Down<span class="text-downbeat-accent">beat</span></h1>
+            <h1 class="text-base font-bold tracking-tight">down<span class="text-downbeat-accent">beat</span></h1>
           </div>
           <div class="flex shrink-0 items-center gap-2 md:hidden">
             <button
@@ -175,9 +175,9 @@ function handleSaveNewPreset() {
           </div>
         </header>
 
-        <!-- Desktop : la sidebar est toujours visible (pas de bouton pour
-        l'ouvrir), donc ce bouton vit hors du header centré, fixé contre son
-        bord gauche avec une petite marge. -->
+        <!-- Desktop: the sidebar is always visible (no toggle button), so
+        this button lives outside the centered header, fixed to its left
+        edge with a small margin. -->
         <button
           type="button"
           class="hidden rounded-lg border border-downbeat-panel-2 bg-downbeat-panel p-2.5 text-downbeat-text outline-none transition-colors motion-reduce:transition-none hover:bg-downbeat-panel-2 focus-visible:ring-2 focus-visible:ring-downbeat-accent md:fixed md:right-84 md:top-5 md:z-20 md:flex"

@@ -38,9 +38,9 @@ export default defineConfig({
       ],
       manifest: {
         id: '.',
-        name: 'Downbeat',
-        short_name: 'Downbeat',
-        description: 'Métronome web pour groupe, utilisable hors ligne.',
+        name: 'downbeat',
+        short_name: 'downbeat',
+        description: 'Web metronome for bands, usable offline.',
         lang: 'fr',
         theme_color: '#0b0c0e',
         background_color: '#0b0c0e',

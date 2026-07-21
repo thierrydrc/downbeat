@@ -1,8 +1,8 @@
 {
   "name": "downbeat",
   "private": true,
-  "version": "1.3.2",
-  "description": "Métronome web pour groupe, utilisable hors ligne et installable en PWA.",
+  "version": "1.4.0",
+  "description": "Web metronome for bands, usable offline and installable as a PWA.",
   "author": "thierrydrc",
   "license": "MIT",
   "homepage": "https://thierrydrc.github.io/DownBeat/",

@@ -28,9 +28,8 @@ const emit = defineEmits(['set-volume', 'set-boost'])
       />
     </div>
 
-    <!-- Espacement généreux + cadre distinct : sur mobile, un doigt qui
-    dérape en bas du slider de volume ne doit pas pouvoir activer le boost
-    par accident. -->
+    <!-- Generous spacing + distinct frame: on mobile, a finger slipping off
+    the volume slider shouldn't accidentally toggle the boost. -->
     <label
       class="mt-5 flex min-h-11 items-center gap-3 rounded-lg border border-downbeat-panel-2 px-3 py-2.5 text-sm text-downbeat-text outline-none has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-downbeat-accent"
     >
@@ -40,7 +39,7 @@ const emit = defineEmits(['set-volume', 'set-boost'])
         :checked="boostEnabled"
         @change="emit('set-boost', $event.target.checked)"
       />
-      <span class="flex-1">Boost scène</span>
+      <span class="flex-1">Boost entrée ligne</span>
     </label>
     <p v-if="boostEnabled" class="mt-2 text-[11px] text-downbeat-text/40">
       Le son est amplifié numériquement au-delà de 100 % puis limité pour éviter toute
