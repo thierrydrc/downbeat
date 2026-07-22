@@ -176,7 +176,7 @@ function endDrag() {
           >
             {{ preset.name }}
           </span>
-          <span class="font-mono text-xs text-downbeat-text/60">
+          <span class="select-none font-mono text-xs text-downbeat-text/60">
             {{ preset.tempo }} BPM · {{ preset.beatsPerMeasure }}/4
           </span>
         </button>

@@ -25,7 +25,7 @@ const emit = defineEmits(['set-tempo', 'increment-tempo', 'tap-tempo', 'set-beat
           >
             Tap
           </button>
-          <span class="font-mono text-2xl tabular-nums text-downbeat-text">
+          <span class="select-none font-mono text-2xl tabular-nums text-downbeat-text">
             {{ tempo }} <span class="text-sm text-downbeat-text/50">BPM</span>
           </span>
         </div>
@@ -62,7 +62,7 @@ const emit = defineEmits(['set-tempo', 'increment-tempo', 'tap-tempo', 'set-beat
     </div>
 
     <div class="flex flex-col gap-2">
-      <span class="text-sm text-downbeat-text/70">Mesure</span>
+      <span class="select-none text-sm text-downbeat-text/70">Mesure</span>
       <div class="grid grid-cols-2 gap-2">
         <button
           v-for="option in [4, 3]"

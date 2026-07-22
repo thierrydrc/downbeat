@@ -12,7 +12,7 @@ const emit = defineEmits(['set-volume', 'set-boost'])
     <div class="flex flex-col gap-2">
       <div class="flex items-center justify-between">
         <label for="volume-slider" class="text-sm text-downbeat-text/70">Volume</label>
-        <span class="font-mono text-sm tabular-nums text-downbeat-text/70">
+        <span class="select-none font-mono text-sm tabular-nums text-downbeat-text/70">
           {{ Math.round(volume * 100) }}%
         </span>
       </div>

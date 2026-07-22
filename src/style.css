@@ -55,6 +55,16 @@ body {
   touch-action: manipulation;
 }
 
+/* Repeated/fast taps on controls (START/STOP, tap tempo, drag handle...)
+   otherwise trigger the browser's native text-selection highlight. Applied
+   globally rather than per-button so new controls get it for free. */
+button,
+[role='button'],
+label {
+  user-select: none;
+  -webkit-user-select: none;
+}
+
 @keyframes pulse-beat {
   0% {
     opacity: 0.9;

@@ -269,7 +269,7 @@ function handleSaveNewPreset() {
           </template>
           <template v-else>
             <div class="flex w-full max-w-md items-center justify-between rounded-2xl bg-downbeat-panel p-5 shadow-lg">
-              <span class="font-mono text-lg tabular-nums text-downbeat-text">
+              <span class="select-none font-mono text-lg tabular-nums text-downbeat-text">
                 {{ tempo }} <span class="text-sm text-downbeat-text/50">BPM</span>
                 <span class="text-downbeat-text/50">·</span>
                 {{ beatsPerMeasure }}/4
