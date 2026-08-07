@@ -16,14 +16,6 @@ const CLICK_SUSTAIN = 0.008
 export const MIN_TEMPO = 30
 export const MAX_TEMPO = 240
 
-// Normal volume (slider) stays in the natural 0-1 range (0-100%, unity gain
-// = 0 dBFS). Line input boost is a separate explicit toggle rather than a
-// point further up the slider: it allows gain > 1, relying on a limiter
-// downstream to absorb the resulting overshoot past 0 dBFS without audible
-// distortion. Note this can't exceed the device's physical output ceiling
-// or bypass any hardware/OS limiter.
-const BOOST_FACTOR = 4
-
 const TAP_MAX_INTERVALS = 8
 const TAP_TIMEOUT_MS = 2000
 
@@ -66,12 +58,10 @@ export function useMetronome() {
   const tempo = ref(120)
   const beatsPerMeasure = ref(4)
   const volume = ref(0.7)
-  const boostEnabled = ref(false)
   const currentBeat = ref(-1)
 
   let audioCtx = null
   let masterGain = null
-  let limiter = null
   let wakeLockSentinel = null
   let keepAliveAudio = null
 
@@ -92,19 +82,9 @@ export function useMetronome() {
       const AudioContextClass = window.AudioContext || window.webkitAudioContext
       audioCtx = new AudioContextClass()
       masterGain = audioCtx.createGain()
-      masterGain.gain.value = volume.value * (boostEnabled.value ? BOOST_FACTOR : 1)
+      masterGain.gain.value = volume.value
 
-      // Aggressive but clean limiter: absorbs the 0 dBFS overshoot caused by
-      // gain > 1 (boost) without letting audible distortion through.
-      limiter = audioCtx.createDynamicsCompressor()
-      limiter.threshold.value = -3
-      limiter.knee.value = 0
-      limiter.ratio.value = 16
-      limiter.attack.value = 0.003
-      limiter.release.value = 0.08
-
-      masterGain.connect(limiter)
-      limiter.connect(audioCtx.destination)
+      masterGain.connect(audioCtx.destination)
     }
     if (audioCtx.state === 'suspended') {
       audioCtx.resume()
@@ -197,10 +177,10 @@ export function useMetronome() {
     rafId = requestAnimationFrame(visualSync)
   }
 
-  // Keeps the screen from locking while the metronome runs - typical stage
-  // use means the screen goes untouched for minutes, and locking can
-  // suspend the AudioContext (especially on iOS Safari), silently killing
-  // the click mid-song.
+  // Keeps the screen from locking for as long as the app is open, not just
+  // while playing - on iOS, a screen lock can suspend the AudioContext
+  // (especially on Safari), silently killing the click mid-song, so the
+  // safest bet is to never let the screen lock while the app is in front.
   async function acquireWakeLock() {
     if (!('wakeLock' in navigator)) return
     try {
@@ -223,21 +203,23 @@ export function useMetronome() {
 
   // The browser auto-releases the wake lock when the tab backgrounds, and
   // the AudioContext can get suspended (call, notification, sleep...).
-  // Both are restarted on return to foreground so the metronome doesn't go
-  // silent without the user noticing.
+  // Both are restarted on return to foreground so the app stays awake and
+  // the metronome doesn't go silent without the user noticing.
   function handleVisibilityChange() {
-    if (document.visibilityState !== 'visible' || !isPlaying.value) return
+    if (document.visibilityState !== 'visible') return
+    acquireWakeLock()
+    if (!isPlaying.value) return
     if (audioCtx?.state === 'suspended') {
       audioCtx.resume()
     }
     if (keepAliveAudio?.paused) {
       keepAliveAudio.play().catch(() => {})
     }
-    acquireWakeLock()
   }
 
   document.addEventListener('visibilitychange', handleVisibilityChange)
   setupMediaSession()
+  acquireWakeLock()
 
   function start() {
     if (isPlaying.value) return
@@ -249,7 +231,6 @@ export function useMetronome() {
     isPlaying.value = true
     scheduler()
     rafId = requestAnimationFrame(visualSync)
-    acquireWakeLock()
     updateMediaSessionMetadata()
     if ('mediaSession' in navigator) navigator.mediaSession.playbackState = 'playing'
   }
@@ -266,7 +247,6 @@ export function useMetronome() {
     }
     scheduledBeats.length = 0
     currentBeat.value = -1
-    releaseWakeLock()
     keepAliveAudio?.pause()
     if ('mediaSession' in navigator) navigator.mediaSession.playbackState = 'paused'
   }
@@ -301,16 +281,11 @@ export function useMetronome() {
 
   function applyGain() {
     if (!masterGain) return
-    masterGain.gain.value = volume.value * (boostEnabled.value ? BOOST_FACTOR : 1)
+    masterGain.gain.value = volume.value
   }
 
   function setVolume(value) {
     volume.value = Math.min(1, Math.max(0, value))
-    applyGain()
-  }
-
-  function setBoost(enabled) {
-    boostEnabled.value = !!enabled
     applyGain()
   }
 
@@ -340,6 +315,7 @@ export function useMetronome() {
 
   onUnmounted(() => {
     stop()
+    releaseWakeLock()
     document.removeEventListener('visibilitychange', handleVisibilityChange)
     keepAliveAudio?.remove()
   })
@@ -349,7 +325,6 @@ export function useMetronome() {
     tempo,
     beatsPerMeasure,
     volume,
-    boostEnabled,
     currentBeat,
     minTempo: MIN_TEMPO,
     maxTempo: MAX_TEMPO,
@@ -360,7 +335,6 @@ export function useMetronome() {
     incrementTempo,
     setBeatsPerMeasure,
     setVolume,
-    setBoost,
     tapTempo,
     loadPreset,
   }

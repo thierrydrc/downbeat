@@ -56,17 +56,15 @@ From <https://thierrydrc.github.io/DownBeat/>:
   Chrome, runs on Safari's engine, but only Safari has access to PWA installation). Open the
   link in Safari, then **Share** → **Add to Home Screen**.
 
-## Volume and "Line Input Boost"
+## Volume
 
-The volume slider goes from 0 to 100%. The **Line Input Boost** checkbox (below the slider)
-amplifies the signal beyond 100% with an anti-clipping limiter, for a headphone/line output
-into a mixing console. Actual result depends on the device's hardware output ceiling — test
-under real conditions. Also turn the device's system volume all the way up.
+The volume slider goes from 0 to 100% of the device's native output — no digital boost beyond
+that. For the loudest possible click, turn the device's system volume all the way up too.
 
-While the metronome is running, the app keeps the screen from locking (Wake Lock API) and
-automatically resumes audio if it was suspended (device sleep, phone call...) when coming back
-to the foreground — useful on stage, where the screen isn't touched for several minutes at a
-time.
+As long as the app is open, it keeps the screen from locking (Wake Lock API), and while the
+metronome is running it automatically resumes audio if it was suspended (device sleep, phone
+call...) when coming back to the foreground — useful on stage, where the screen isn't touched
+for several minutes at a time.
 
 The app also plays a silent looping track alongside the click and registers a
 [Media Session](https://developer.mozilla.org/en-US/docs/Web/API/Media_Session_API), so the OS

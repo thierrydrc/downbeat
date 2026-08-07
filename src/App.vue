@@ -30,13 +30,11 @@ const {
   currentBeat,
   minTempo,
   maxTempo,
-  boostEnabled,
   toggle,
   setTempo,
   incrementTempo,
   setBeatsPerMeasure,
   setVolume,
-  setBoost,
   tapTempo,
   loadPreset,
 } = useMetronome()
@@ -284,12 +282,7 @@ function handleSaveNewPreset() {
             </div>
           </template>
 
-          <VolumeControl
-            :volume="volume"
-            :boost-enabled="boostEnabled"
-            @set-volume="setVolume"
-            @set-boost="setBoost"
-          />
+          <VolumeControl :volume="volume" @set-volume="setVolume" />
         </main>
 
         <footer class="flex items-center justify-center gap-1.5 pb-1 text-[11px] text-downbeat-text/30">

@@ -1,7 +1,7 @@
 {
   "name": "downbeat",
   "private": true,
-  "version": "1.4.1",
+  "version": "1.5.0",
   "description": "Web metronome for bands, usable offline and installable as a PWA.",
   "author": "thierrydrc",
   "license": "MIT",
@@ -13,6 +13,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
+    "dev:host": "vite --host",
     "build": "vite build",
     "preview": "vite preview",
     "icons": "node scripts/generate-icons.mjs"

@@ -1,10 +1,9 @@
 <script setup>
 defineProps({
   volume: { type: Number, required: true },
-  boostEnabled: { type: Boolean, default: false },
 })
 
-const emit = defineEmits(['set-volume', 'set-boost'])
+const emit = defineEmits(['set-volume'])
 </script>
 
 <template>
@@ -27,24 +26,5 @@ const emit = defineEmits(['set-volume', 'set-boost'])
         @input="emit('set-volume', Number($event.target.value))"
       />
     </div>
-
-    <!-- Generous spacing + distinct frame: on mobile, a finger slipping off
-    the volume slider shouldn't accidentally toggle the boost. -->
-    <label
-      class="mt-5 flex min-h-11 items-center gap-3 rounded-lg border border-downbeat-panel-2 px-3 py-2.5 text-sm text-downbeat-text outline-none has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-downbeat-accent"
-    >
-      <input
-        type="checkbox"
-        class="h-5 w-5 shrink-0 accent-downbeat-accent"
-        :checked="boostEnabled"
-        @change="emit('set-boost', $event.target.checked)"
-      />
-      <span class="flex-1">Boost entrée ligne</span>
-    </label>
-    <p v-if="boostEnabled" class="mt-2 text-[11px] text-downbeat-text/40">
-      Le son est amplifié numériquement au-delà de 100 % puis limité pour éviter toute
-      saturation — utile pour une sortie ligne/casque vers une console. Le résultat réel
-      dépend du plafond matériel de sortie de l'appareil : testez en conditions réelles.
-    </p>
   </div>
 </template>
