@@ -1,5 +1,5 @@
 <script setup>
-import { computed, onMounted, onUnmounted, ref } from 'vue'
+import { computed, onMounted, onUnmounted, ref, watchEffect } from 'vue'
 import {
   mdiChevronLeft,
   mdiChevronRight,
@@ -39,6 +39,7 @@ const {
   setVolume,
   tapTempo,
   loadPreset,
+  setMediaTrack,
 } = useMetronome()
 
 const { presets, addPreset, updatePreset } = usePresets()
@@ -118,6 +119,17 @@ function goToPreset(offset) {
   const target = presets.value[currentPresetIndex.value + offset]
   if (target) handleLoadPreset(target)
 }
+
+// Lock-screen ⏮/⏭ mirror the in-app ‹ › arrows exactly: active only when a
+// preset is loaded and a neighbor exists, and the Now Playing title shows
+// the loaded preset's name.
+watchEffect(() => {
+  setMediaTrack({
+    title: loadedPreset.value?.name ?? null,
+    previous: canGoPrevPreset.value ? () => goToPreset(-1) : null,
+    next: canGoNextPreset.value ? () => goToPreset(1) : null,
+  })
+})
 
 function handleSaveEdit() {
   if (!loadedPreset.value) return
@@ -213,7 +225,7 @@ function handleSaveNewPreset() {
               <div class="flex items-center gap-1.5">
                 <button
                   type="button"
-                  class="flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-downbeat-text/60 outline-none transition-colors motion-reduce:transition-none hover:text-downbeat-accent focus-visible:ring-2 focus-visible:ring-downbeat-accent disabled:pointer-events-none disabled:opacity-30"
+                  class="flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-downbeat-panel-2 bg-downbeat-panel text-downbeat-text/60 outline-none transition-colors motion-reduce:transition-none hover:bg-downbeat-panel-2 hover:text-downbeat-accent focus-visible:ring-2 focus-visible:ring-downbeat-accent disabled:pointer-events-none disabled:opacity-30"
                   aria-label="Preset précédent"
                   :disabled="!canGoPrevPreset"
                   @click="goToPreset(-1)"
@@ -240,7 +252,7 @@ function handleSaveNewPreset() {
 
                 <button
                   type="button"
-                  class="flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-downbeat-text/60 outline-none transition-colors motion-reduce:transition-none hover:text-downbeat-accent focus-visible:ring-2 focus-visible:ring-downbeat-accent disabled:pointer-events-none disabled:opacity-30"
+                  class="flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-downbeat-panel-2 bg-downbeat-panel text-downbeat-text/60 outline-none transition-colors motion-reduce:transition-none hover:bg-downbeat-panel-2 hover:text-downbeat-accent focus-visible:ring-2 focus-visible:ring-downbeat-accent disabled:pointer-events-none disabled:opacity-30"
                   aria-label="Preset suivant"
                   :disabled="!canGoNextPreset"
                   @click="goToPreset(1)"

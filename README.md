@@ -71,7 +71,9 @@ and the click itself is a full measure pre-rendered into a buffer and looped nat
 audio thread, so no throttled main-thread timer is involved. This also registers the metronome
 as active media playback: play/pause controls on the lock screen/notifications
 ([Media Session](https://developer.mozilla.org/en-US/docs/Web/API/Media_Session_API)), and the
-ringer/silent switch doesn't mute it. On browsers without the Audio Session API (Chrome,
+ringer/silent switch doesn't mute it. With a preset loaded, the lock screen shows its name as
+the track title and the previous/next buttons step through the preset list, mirroring the
+in-app ‹ › arrows (inactive with no loaded preset, no wrap-around at the ends). On browsers without the Audio Session API (Chrome,
 Android...), a silent looping track provides the same media-playback treatment instead.
 
 As long as the app is open, it also keeps the screen from locking (Wake Lock API) — best

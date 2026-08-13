@@ -153,6 +153,10 @@ export function useMetronome() {
 
   let tapTimes = []
 
+  // Now Playing title override (the loaded preset's name); null falls back
+  // to the app name.
+  let trackTitle = null
+
   // WebKit reports the non-standard 'interrupted' state when iOS pauses the
   // context from outside the page (screen lock without a 'playback' audio
   // session, phone call...). Resuming is only worth attempting while
@@ -203,7 +207,7 @@ export function useMetronome() {
   function updateMediaSessionMetadata() {
     if (!('mediaSession' in navigator)) return
     navigator.mediaSession.metadata = new MediaMetadata({
-      title: 'downbeat',
+      title: trackTitle || 'downbeat',
       artist: `${tempo.value} BPM`,
       artwork: [
         { src: 'icons/icon-192.png', sizes: '192x192', type: 'image/png' },
@@ -219,6 +223,18 @@ export function useMetronome() {
     navigator.mediaSession.setActionHandler('play', start)
     navigator.mediaSession.setActionHandler('pause', stop)
     navigator.mediaSession.setActionHandler('stop', stop)
+  }
+
+  // Lock-screen track info: title shown as the Now Playing track, and
+  // previous/next actions (the caller wires them to preset navigation).
+  // Passing null unregisters a handler, which greys out the corresponding
+  // lock-screen button.
+  function setMediaTrack({ title = null, previous = null, next = null } = {}) {
+    trackTitle = title
+    if (!('mediaSession' in navigator)) return
+    navigator.mediaSession.setActionHandler('previoustrack', previous)
+    navigator.mediaSession.setActionHandler('nexttrack', next)
+    if (isPlaying.value) updateMediaSessionMetadata()
   }
 
   function trackSource(source) {
@@ -272,9 +288,12 @@ export function useMetronome() {
   // (stop(when)/start(when, offset)) and falls on digital silence on both
   // sides, so no click is cut and no glitch is possible. Serialized by
   // `swapInProgress`: a burst of changes (tap tempo, slider drag) coalesces
-  // into at most one swap per beat, each taking the freshest values. Only
-  // ever triggered by foreground UI interactions, so the setTimeout below
-  // is safe.
+  // into at most one swap per beat, each taking the freshest values. Can
+  // also fire with the screen locked (lock-screen previous/next loading a
+  // preset): harmless - the scheduled swap runs sample-accurately on the
+  // audio thread regardless, and a throttled setTimeout below only delays
+  // the coalescing of a follow-up change, which the end-of-loop re-check
+  // then picks up.
   async function requestLoopUpdate() {
     if (swapInProgress) return
     swapInProgress = true
@@ -549,5 +568,6 @@ export function useMetronome() {
     setVolume,
     tapTempo,
     loadPreset,
+    setMediaTrack,
   }
 }
