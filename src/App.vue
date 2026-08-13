@@ -15,7 +15,6 @@ import { useTheme } from './composables/useTheme.js'
 import { version, repository } from '../package.json'
 import MetronomeDisplay from './components/MetronomeDisplay.vue'
 import MetronomeControls from './components/MetronomeControls.vue'
-import VolumeControl from './components/VolumeControl.vue'
 import PresetList from './components/PresetList.vue'
 import Modal from './components/Modal.vue'
 import MdiIcon from './components/MdiIcon.vue'
@@ -26,7 +25,6 @@ const {
   isPlaying,
   tempo,
   beatsPerMeasure,
-  volume,
   currentBeat,
   wakeLockActive,
   wakeLockSupported,
@@ -36,7 +34,6 @@ const {
   setTempo,
   incrementTempo,
   setBeatsPerMeasure,
-  setVolume,
   tapTempo,
   loadPreset,
   setMediaTrack,
@@ -308,8 +305,6 @@ function handleSaveNewPreset() {
               </button>
             </div>
           </template>
-
-          <VolumeControl :volume="volume" @set-volume="setVolume" />
         </main>
 
         <footer class="flex items-center justify-center gap-1.5 pb-1 text-[11px] text-downbeat-text/30">

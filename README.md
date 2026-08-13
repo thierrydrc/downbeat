@@ -58,8 +58,9 @@ From <https://thierrydrc.github.io/DownBeat/>:
 
 ## Volume
 
-The volume slider goes from 0 to 100% of the device's native output — no digital boost beyond
-that. For the loudest possible click, turn the device's system volume all the way up too.
+There is no in-app volume control: the click plays at 100% of the device's native output, so
+the phone's volume buttons are the single loudness control. On iOS the `playback` audio
+session routes the click to the media channel, so the ringer/silent switch doesn't affect it.
 
 ## Screen lock and background playback
 

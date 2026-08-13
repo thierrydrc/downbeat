@@ -122,13 +122,11 @@ export function useMetronome() {
   const isPlaying = ref(false)
   const tempo = ref(120)
   const beatsPerMeasure = ref(4)
-  const volume = ref(0.7)
   const currentBeat = ref(-1)
   const wakeLockActive = ref(false)
   const wakeLockSupported = 'wakeLock' in navigator
 
   let audioCtx = null
-  let masterGain = null
   let keepAliveAudio = null
 
   // Loop engine state. `loop` describes the measure currently heard;
@@ -177,10 +175,6 @@ export function useMetronome() {
       const AudioContextClass = window.AudioContext || window.webkitAudioContext
       audioCtx = new AudioContextClass()
       audioCtx.onstatechange = handleAudioStateChange
-      masterGain = audioCtx.createGain()
-      masterGain.gain.value = volume.value
-
-      masterGain.connect(audioCtx.destination)
     }
     // 'suspended' but also WebKit's 'interrupted'; a rejection (e.g. hidden
     // page) is non-fatal - playback catches up when the context resumes.
@@ -329,7 +323,7 @@ export function useMetronome() {
         const source = audioCtx.createBufferSource()
         source.buffer = buffer
         source.loop = true
-        source.connect(masterGain)
+        source.connect(audioCtx.destination)
         loopSource.stop(swapTime)
         source.start(swapTime, offset)
         trackSource(source)
@@ -453,7 +447,7 @@ export function useMetronome() {
     const source = audioCtx.createBufferSource()
     source.buffer = buffer
     source.loop = true
-    source.connect(masterGain)
+    source.connect(audioCtx.destination)
     source.start(startTime)
     trackSource(source)
     loopSource = source
@@ -512,16 +506,6 @@ export function useMetronome() {
     }
   }
 
-  function applyGain() {
-    if (!masterGain) return
-    masterGain.gain.value = volume.value
-  }
-
-  function setVolume(value) {
-    volume.value = Math.min(1, Math.max(0, value))
-    applyGain()
-  }
-
   function tapTempo() {
     const now = performance.now()
     if (tapTimes.length && now - tapTimes[tapTimes.length - 1] > TAP_TIMEOUT_MS) {
@@ -559,7 +543,6 @@ export function useMetronome() {
     isPlaying,
     tempo,
     beatsPerMeasure,
-    volume,
     currentBeat,
     wakeLockActive,
     wakeLockSupported,
@@ -571,7 +554,6 @@ export function useMetronome() {
     setTempo,
     incrementTempo,
     setBeatsPerMeasure,
-    setVolume,
     tapTempo,
     loadPreset,
     setMediaTrack,
