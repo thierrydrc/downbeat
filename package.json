@@ -1,7 +1,7 @@
 {
   "name": "downbeat",
   "private": true,
-  "version": "1.9.1",
+  "version": "1.9.2",
   "description": "A web metronome for bands that works offline and can be installed as a PWA.",
   "author": "thierrydrc",
   "license": "MIT",
