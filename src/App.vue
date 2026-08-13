@@ -28,6 +28,8 @@ const {
   beatsPerMeasure,
   volume,
   currentBeat,
+  wakeLockActive,
+  wakeLockSupported,
   minTempo,
   maxTempo,
   toggle,
@@ -192,6 +194,19 @@ function handleSaveNewPreset() {
             :beats-per-measure="beatsPerMeasure"
             @toggle="toggle"
           />
+
+          <!-- Best-effort warning: the OS refused (or dropped) the screen
+          wake lock, most likely Low Power Mode. Caveat: iOS may also grant
+          the request without any actual effect (undetectable), hence the
+          conditional wording. -->
+          <p
+            v-if="isPlaying && wakeLockSupported && !wakeLockActive"
+            role="status"
+            class="w-full max-w-md rounded-lg bg-downbeat-panel px-3 py-2 text-center text-xs text-downbeat-text/60"
+          >
+            L'écran pourrait se verrouiller (maintien d'écran refusé — mode économie
+            d'énergie&nbsp;?). Le métronome continuera de jouer écran verrouillé.
+          </p>
 
           <div v-if="loadedPreset" class="flex w-full max-w-md flex-col">
             <template v-if="loadedPreset">

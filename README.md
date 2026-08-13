@@ -61,19 +61,28 @@ From <https://thierrydrc.github.io/DownBeat/>:
 The volume slider goes from 0 to 100% of the device's native output — no digital boost beyond
 that. For the loudest possible click, turn the device's system volume all the way up too.
 
-As long as the app is open, it keeps the screen from locking (Wake Lock API), and while the
-metronome is running it automatically resumes audio if it was suspended (device sleep, phone
-call...) when coming back to the foreground — useful on stage, where the screen isn't touched
-for several minutes at a time.
+## Screen lock and background playback
 
-The app also plays a silent looping track alongside the click and registers a
-[Media Session](https://developer.mozilla.org/en-US/docs/Web/API/Media_Session_API), so the OS
-treats it as active media playback: play/pause controls on the lock screen/notifications, and
-on iOS, sound isn't muted by the ringer/silent switch the way plain Web Audio output normally
-would be. Note: on iOS, a plain web app (even installed to the home screen) may still stop
-audio when the screen is manually locked — this is a Safari platform limitation that no web
-API can fully work around; only a native wrapper (e.g. Capacitor) with background audio
-capabilities can guarantee it.
+The click keeps playing with the screen locked or the app in the background. Two mechanisms
+make that possible on iOS: the audio session is declared as `playback`
+([Audio Session API](https://developer.mozilla.org/en-US/docs/Web/API/AudioSession), the only
+mechanism that exempts Web Audio from iOS's background restrictions — reliable since iOS 17.5),
+and the click itself is a full measure pre-rendered into a buffer and looped natively on the
+audio thread, so no throttled main-thread timer is involved. This also registers the metronome
+as active media playback: play/pause controls on the lock screen/notifications
+([Media Session](https://developer.mozilla.org/en-US/docs/Web/API/Media_Session_API)), and the
+ringer/silent switch doesn't mute it. On browsers without the Audio Session API (Chrome,
+Android...), a silent looping track provides the same media-playback treatment instead.
+
+As long as the app is open, it also keeps the screen from locking (Wake Lock API) — best
+effort: iOS refuses it in Low Power Mode (which forces a 30 s auto-lock), in which case the
+app shows a small warning while playing; the sound itself doesn't depend on the screen staying
+on. While the metronome is running, audio automatically resumes after an interruption (phone
+call, notification...) when coming back to the foreground.
+
+Known limitation: iOS 26.0/26.0.1 has OS-level audio bugs specific to installed web apps
+(improved from 26.1 on, never acknowledged by Apple) that no web app can work around — if the
+sound still dies with the screen locked, update iOS.
 
 ## Presets
 
