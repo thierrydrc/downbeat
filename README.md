@@ -87,7 +87,10 @@ auto-lock), in which case the app shows a small notice under the switch. While t
 is running, audio automatically resumes after an interruption (phone call, notification...)
 when coming back to the foreground. Note that what happens when tapping the lock-screen
 Now Playing widget (beyond its buttons) is entirely OS-controlled — the web platform has no
-API to make it open the app.
+API to make it open the app. Observed on iOS 26 with several web apps installed: the tap can
+even open the *wrong* web app (an unrelated one, from another domain) — an OS-side
+attribution bug between installed web clips; the only remedy is on the device itself
+(remove and re-add the home-screen icon so iOS re-registers it), nothing an app can do.
 
 Known limitation: iOS 26.0/26.0.1 has OS-level audio bugs specific to installed web apps
 (improved from 26.1 on, never acknowledged by Apple) that no web app can work around — if the
