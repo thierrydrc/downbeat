@@ -123,8 +123,6 @@ export function useMetronome() {
   const tempo = ref(120)
   const beatsPerMeasure = ref(4)
   const currentBeat = ref(-1)
-  const wakeLockActive = ref(false)
-  const wakeLockSupported = 'wakeLock' in navigator
 
   let audioCtx = null
   let keepAliveAudio = null
@@ -146,10 +144,6 @@ export function useMetronome() {
   const liveSources = new Set()
 
   let rafId = null
-
-  let wakeLockSentinel = null
-  let wakeLockRequestPending = false
-  let lastWakeLockRetry = 0
 
   let tapTimes = []
 
@@ -347,71 +341,11 @@ export function useMetronome() {
     }
   }
 
-  // Keeps the screen from locking for as long as the app is open, not just
-  // while playing - a musician on stage shouldn't have to touch the phone.
-  // Best effort: iOS refuses it in Low Power Mode (sometimes by resolving
-  // the request without any actual effect - undetectable), and the UI shows
-  // a warning through `wakeLockActive`. The sound itself no longer depends
-  // on the screen staying on (see the audio session / loop engine above).
-  async function acquireWakeLock() {
-    if (!wakeLockSupported || wakeLockSentinel || wakeLockRequestPending) return
-    if (document.visibilityState !== 'visible') return
-    wakeLockRequestPending = true
-    try {
-      const sentinel = await navigator.wakeLock.request('screen')
-      wakeLockSentinel = sentinel
-      wakeLockActive.value = true
-      sentinel.addEventListener('release', () => {
-        // Voluntary releases clear `wakeLockSentinel` first - skip those.
-        if (wakeLockSentinel !== sentinel) return
-        wakeLockSentinel = null
-        wakeLockActive.value = false
-        // The OS dropped a lock we still want: retry while visible,
-        // throttled so a systematic refusal doesn't loop.
-        if (document.visibilityState === 'visible' && Date.now() - lastWakeLockRetry > 3000) {
-          lastWakeLockRetry = Date.now()
-          acquireWakeLock()
-        }
-      })
-    } catch {
-      // Denied (Low Power Mode, hidden tab...): non-blocking, the metronome
-      // keeps running without the screen lock.
-      wakeLockActive.value = false
-    } finally {
-      wakeLockRequestPending = false
-    }
-  }
-
-  async function releaseWakeLock() {
-    const sentinel = wakeLockSentinel
-    wakeLockSentinel = null
-    wakeLockActive.value = false
-    try {
-      await sentinel?.release()
-    } catch {
-      // nothing to do
-    }
-  }
-
-  // WebKit only grants the very first wake lock request from a user gesture
-  // (later re-acquisitions are exempt), and the setup-time attempt below
-  // runs outside one - so the first tap/keypress anywhere retries it.
-  // 'click' rather than 'pointerdown': on touch devices pointerdown fires
-  // before the transient activation exists.
-  function handleFirstGesture() {
-    window.removeEventListener('click', handleFirstGesture, true)
-    window.removeEventListener('keydown', handleFirstGesture, true)
-    if (!wakeLockActive.value) acquireWakeLock()
-  }
-
-  // The browser auto-releases the wake lock when the tab backgrounds, and
-  // the AudioContext may have been suspended/interrupted while away (call,
-  // notification, sleep...). Both are restarted on return to foreground so
-  // the app stays awake and the metronome doesn't go silent without the
-  // user noticing.
+  // The AudioContext may have been suspended/interrupted while away (call,
+  // notification, sleep...): restart it on return to foreground so the
+  // metronome doesn't go silent without the user noticing.
   function handleVisibilityChange() {
     if (document.visibilityState !== 'visible') return
-    acquireWakeLock()
     if (!isPlaying.value) return
     if (audioCtx && (audioCtx.state === 'suspended' || audioCtx.state === 'interrupted')) {
       audioCtx.resume().catch(() => {})
@@ -422,18 +356,14 @@ export function useMetronome() {
   }
 
   document.addEventListener('visibilitychange', handleVisibilityChange)
-  window.addEventListener('click', handleFirstGesture, { once: true, capture: true })
-  window.addEventListener('keydown', handleFirstGesture, { once: true, capture: true })
   setupMediaSession()
   configureAudioSession()
-  acquireWakeLock()
 
   async function start() {
     if (isPlaying.value) return
     configureAudioSession()
     // Everything up to the first await must stay synchronous within the
-    // user gesture (autoplay policies, wake lock transient activation).
-    acquireWakeLock()
+    // user gesture (autoplay policies).
     const resumed = ensureAudioContext()
     ensureKeepAliveAudio()
     const targetTempo = tempo.value
@@ -532,10 +462,7 @@ export function useMetronome() {
 
   onUnmounted(() => {
     stop()
-    releaseWakeLock()
     document.removeEventListener('visibilitychange', handleVisibilityChange)
-    window.removeEventListener('click', handleFirstGesture, true)
-    window.removeEventListener('keydown', handleFirstGesture, true)
     keepAliveAudio?.remove()
   })
 
@@ -544,8 +471,6 @@ export function useMetronome() {
     tempo,
     beatsPerMeasure,
     currentBeat,
-    wakeLockActive,
-    wakeLockSupported,
     minTempo: MIN_TEMPO,
     maxTempo: MAX_TEMPO,
     start,

@@ -12,6 +12,7 @@ import {
 import { useMetronome } from './composables/useMetronome.js'
 import { usePresets } from './composables/usePresets.js'
 import { useTheme } from './composables/useTheme.js'
+import { useWakeLock } from './composables/useWakeLock.js'
 import { version, repository } from '../package.json'
 import MetronomeDisplay from './components/MetronomeDisplay.vue'
 import MetronomeControls from './components/MetronomeControls.vue'
@@ -26,8 +27,6 @@ const {
   tempo,
   beatsPerMeasure,
   currentBeat,
-  wakeLockActive,
-  wakeLockSupported,
   minTempo,
   maxTempo,
   toggle,
@@ -41,6 +40,7 @@ const {
 
 const { presets, addPreset, updatePreset } = usePresets()
 const { theme, toggleTheme } = useTheme()
+const { keepAwake, toggleKeepAwake, wakeLockSupported, wakeLockDenied } = useWakeLock()
 
 const loadedPreset = ref(null)
 const isEditingPreset = ref(false)
@@ -204,19 +204,6 @@ function handleSaveNewPreset() {
             @toggle="toggle"
           />
 
-          <!-- Best-effort warning: the OS refused (or dropped) the screen
-          wake lock, most likely Low Power Mode. Caveat: iOS may also grant
-          the request without any actual effect (undetectable), hence the
-          conditional wording. -->
-          <p
-            v-if="isPlaying && wakeLockSupported && !wakeLockActive"
-            role="status"
-            class="w-full max-w-md rounded-lg bg-downbeat-panel px-3 py-2 text-center text-xs text-downbeat-text/60"
-          >
-            L'écran pourrait se verrouiller (maintien d'écran refusé — mode économie
-            d'énergie&nbsp;?). Le métronome continuera de jouer écran verrouillé.
-          </p>
-
           <div v-if="loadedPreset" class="flex w-full max-w-md flex-col">
             <template v-if="loadedPreset">
               <div class="flex items-center gap-1.5">
@@ -305,6 +292,37 @@ function handleSaveNewPreset() {
               </button>
             </div>
           </template>
+
+          <!-- Opt-in wake lock: playback survives the screen locking, so
+          keeping the screen on is a pure preference (persisted). The failure
+          message only shows after an actual OS refusal (Low Power Mode...),
+          never during the acquisition window. -->
+          <div v-if="wakeLockSupported" class="flex w-full max-w-md flex-col gap-2">
+            <div class="flex items-center justify-between gap-3 rounded-xl bg-downbeat-panel px-4 py-3">
+              <span id="keep-awake-label" class="text-sm text-downbeat-text/80">Garder l'écran allumé</span>
+              <button
+                type="button"
+                role="switch"
+                :aria-checked="keepAwake"
+                aria-labelledby="keep-awake-label"
+                class="relative h-7 w-12 shrink-0 rounded-full outline-none transition-colors motion-reduce:transition-none focus-visible:ring-2 focus-visible:ring-downbeat-accent"
+                :class="keepAwake ? 'bg-downbeat-accent' : 'bg-downbeat-panel-2'"
+                @click="toggleKeepAwake"
+              >
+                <span
+                  class="absolute left-1 top-1 h-5 w-5 rounded-full transition-transform motion-reduce:transition-none"
+                  :class="keepAwake ? 'translate-x-5 bg-downbeat-on-accent' : 'bg-downbeat-outline'"
+                />
+              </button>
+            </div>
+            <p
+              v-if="keepAwake && wakeLockDenied"
+              role="status"
+              class="w-full rounded-lg bg-downbeat-panel px-3 py-2 text-center text-xs text-downbeat-text/60"
+            >
+              Maintien d'écran refusé par le système (mode économie d'énergie&nbsp;?).
+            </p>
+          </div>
         </main>
 
         <footer class="flex items-center justify-center gap-1.5 pb-1 text-[11px] text-downbeat-text/30">

@@ -80,11 +80,14 @@ button presses and forwards them to the app (browsers only deliver those command
 media element), and on browsers without the Audio Session API (Chrome, Android...) it's also
 what registers the app as active media playback in the first place.
 
-As long as the app is open, it also keeps the screen from locking (Wake Lock API) — best
-effort: iOS refuses it in Low Power Mode (which forces a 30 s auto-lock), in which case the
-app shows a small warning while playing; the sound itself doesn't depend on the screen staying
-on. While the metronome is running, audio automatically resumes after an interruption (phone
-call, notification...) when coming back to the foreground.
+Since playback survives the screen locking, the screen is allowed to lock normally. An
+opt-in "Garder l'écran allumé" switch (persisted across launches) keeps it on via the Wake
+Lock API — best effort: iOS refuses the request in Low Power Mode (which forces a 30 s
+auto-lock), in which case the app shows a small notice under the switch. While the metronome
+is running, audio automatically resumes after an interruption (phone call, notification...)
+when coming back to the foreground. Note that what happens when tapping the lock-screen
+Now Playing widget (beyond its buttons) is entirely OS-controlled — the web platform has no
+API to make it open the app.
 
 Known limitation: iOS 26.0/26.0.1 has OS-level audio bugs specific to installed web apps
 (improved from 26.1 on, never acknowledged by Apple) that no web app can work around — if the
