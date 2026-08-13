@@ -79,15 +79,17 @@ function renderMeasureBuffer(bpm, beats, sampleRate) {
   return offline.startRendering()
 }
 
-// Silent looping track played alongside the click, ONLY on browsers without
-// the Audio Session API (Chrome, Android...): there, a genuinely playing
-// <audio> element is what makes the OS treat the app as active media
-// playback (lock-screen controls via Media Session). On iOS/WebKit the
-// 'playback' audio session covers all of that for the AudioContext itself,
-// and a parallel <audio> element would actually steal the lock-screen
-// controls from it - so it's skipped (see ensureKeepAliveAudio). Generated
-// in memory rather than a public/ file to stay compatible with the
-// single-file bundle (viteSingleFile) and file:// use.
+// Silent looping track played alongside the click, on every platform: a
+// genuinely playing <audio> element is what makes the OS treat the app as
+// active media playback AND what makes lock-screen taps reach our Media
+// Session handlers. WebKit routes remote commands to the "best eligible
+// session" with HTML media elements always ranked above Web Audio, and only
+// media-element sessions forward commands to navigator.mediaSession action
+// handlers - a pure AudioContext session shows Now Playing but swallows
+// pause internally and drops nexttrack/previoustrack entirely (see
+// ensureKeepAliveAudio). Generated in memory rather than a public/ file to
+// stay compatible with the single-file bundle (viteSingleFile) and file://
+// use.
 function createSilentLoopUrl() {
   const sampleRate = 8000
   const dataSize = 400 * 2 // 50ms of 16-bit mono, enough to loop seamlessly
@@ -189,11 +191,15 @@ export function useMetronome() {
   }
 
   function ensureKeepAliveAudio() {
-    // Skipped when the Audio Session API exists (iOS/WebKit): the 'playback'
-    // session already keeps the AudioContext alive and Now Playing-eligible,
-    // and a parallel <audio> element would steal the lock-screen controls
-    // from it.
-    if ('audioSession' in navigator) return
+    // Needed on iOS/WebKit too, alongside the 'playback' audio session: the
+    // session keeps the AudioContext running under a locked screen, but
+    // remote commands are only delivered to our Media Session handlers when
+    // an HTML media element owns the now-playing session. WebKit's
+    // MediaElementSession::didReceiveRemoteControlCommand calls the
+    // navigator.mediaSession handlers; AudioContext::didReceiveRemoteControlCommand
+    // never does - it handles pause by suspending the context and ignores
+    // nexttrack/previoustrack (lock-screen buttons render but taps do
+    // nothing, as seen on iOS 26 in v1.7.0).
     if (!keepAliveAudio) {
       keepAliveAudio = new Audio(createSilentLoopUrl())
       keepAliveAudio.loop = true

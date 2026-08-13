@@ -73,8 +73,11 @@ as active media playback: play/pause controls on the lock screen/notifications
 ([Media Session](https://developer.mozilla.org/en-US/docs/Web/API/Media_Session_API)), and the
 ringer/silent switch doesn't mute it. With a preset loaded, the lock screen shows its name as
 the track title and the previous/next buttons step through the preset list, mirroring the
-in-app ‹ › arrows (inactive with no loaded preset, no wrap-around at the ends). On browsers without the Audio Session API (Chrome,
-Android...), a silent looping track provides the same media-playback treatment instead.
+in-app ‹ › arrows (inactive with no loaded preset, no wrap-around at the ends). A silent
+looping track plays alongside the click on every platform: it's what receives the lock-screen
+button presses and forwards them to the app (browsers only deliver those commands to an actual
+media element), and on browsers without the Audio Session API (Chrome, Android...) it's also
+what registers the app as active media playback in the first place.
 
 As long as the app is open, it also keeps the screen from locking (Wake Lock API) — best
 effort: iOS refuses it in Low Power Mode (which forces a 30 s auto-lock), in which case the
