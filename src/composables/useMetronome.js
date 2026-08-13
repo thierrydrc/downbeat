@@ -92,7 +92,12 @@ function renderMeasureBuffer(bpm, beats, sampleRate) {
 // use.
 function createSilentLoopUrl() {
   const sampleRate = 8000
-  const dataSize = 400 * 2 // 50ms of 16-bit mono, enough to loop seamlessly
+  // 6 s of 16-bit mono silence (~94 KB in memory). Chromium only grants
+  // full audio focus - the prerequisite for the media notification and its
+  // lock-screen controls on Android - to media longer than 5 s
+  // (media/base/media_content_type.cc); shorter tracks are "transient"
+  // incidental sounds, looping or not, and never surface any controls.
+  const dataSize = sampleRate * 2 * 6
 
   const buffer = new ArrayBuffer(44 + dataSize)
   const view = new DataView(buffer)

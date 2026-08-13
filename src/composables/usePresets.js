@@ -64,7 +64,12 @@ const presets = ref(loadFromStorage())
 watch(
   presets,
   (value) => {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(value))
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(value))
+    } catch {
+      // Storage unavailable or full (private browsing, quota...): the list
+      // keeps working in memory for the session, just not persisted.
+    }
   },
   { deep: true },
 )
@@ -95,8 +100,14 @@ function exportPresets() {
   const link = document.createElement('a')
   link.href = url
   link.download = 'downbeat-presets.json'
+  document.body.appendChild(link)
   link.click()
-  URL.revokeObjectURL(url)
+  // Deferred cleanup: revoking synchronously races the browser's download
+  // manager (Android hands the blob URL off and may not have read it yet).
+  setTimeout(() => {
+    link.remove()
+    URL.revokeObjectURL(url)
+  }, 1000)
 }
 
 function importPresets(data, { replace }) {

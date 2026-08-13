@@ -10,7 +10,9 @@ function loadTheme() {
   }
 }
 
-const THEME_COLORS = { dark: '#0b0c0e', light: '#f6f6f4' }
+// Kept in sync with --color-downbeat-bg in style.css for each theme, so the
+// mobile status bar blends into the page background.
+const THEME_COLORS = { dark: '#0b0c0e', light: '#f3f4f7' }
 
 function applyTheme(value) {
   document.documentElement.dataset.theme = value

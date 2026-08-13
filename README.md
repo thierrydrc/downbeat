@@ -78,7 +78,10 @@ in-app ‹ › arrows (inactive with no loaded preset, no wrap-around at the end
 looping track plays alongside the click on every platform: it's what receives the lock-screen
 button presses and forwards them to the app (browsers only deliver those commands to an actual
 media element), and on browsers without the Audio Session API (Chrome, Android...) it's also
-what registers the app as active media playback in the first place.
+what registers the app as active media playback in the first place. The track lasts longer
+than 5 seconds because Chrome only surfaces the media notification (the lock-screen controls
+on Android) for media above that duration — anything shorter is treated as an incidental
+sound.
 
 Since playback survives the screen locking, the screen is allowed to lock normally. An
 opt-in "Garder l'écran allumé" switch (persisted across launches) keeps it on via the Wake
