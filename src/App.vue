@@ -156,7 +156,7 @@ function handleSaveNewPreset() {
 
 <template>
   <div id="app" class="min-h-screen w-full bg-downbeat-bg text-downbeat-text">
-    <div class="flex min-h-screen flex-col px-4 pt-[calc(1.25rem+env(safe-area-inset-top))] pb-5 md:mr-80">
+    <div class="flex min-h-screen flex-col px-4 py-5 md:mr-80">
       <div class="mx-auto flex w-full max-w-3xl flex-1 flex-col gap-5">
         <header class="flex items-center justify-between gap-4 md:justify-center">
           <div class="md:text-center">
@@ -325,7 +325,7 @@ function handleSaveNewPreset() {
           </div>
         </main>
 
-        <footer class="flex items-center justify-center gap-1.5 pb-[calc(0.25rem+env(safe-area-inset-bottom))] text-[11px] text-downbeat-text/30">
+        <footer class="flex items-center justify-center gap-1.5 pb-1 text-[11px] text-downbeat-text/30">
           <span>v{{ version }}</span>
           <a
             :href="repositoryUrl"
@@ -348,7 +348,7 @@ function handleSaveNewPreset() {
 
     <aside
       id="preset-sidebar"
-      class="fixed inset-y-0 right-0 z-40 w-80 max-w-[85vw] transform overflow-y-auto bg-downbeat-panel pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)] transition-transform duration-200 ease-out motion-reduce:transition-none md:translate-x-0"
+      class="fixed inset-y-0 right-0 z-40 w-80 max-w-[85vw] transform overflow-y-auto bg-downbeat-panel transition-transform duration-200 ease-out motion-reduce:transition-none md:translate-x-0"
       :class="isSidebarOpen ? 'translate-x-0' : 'translate-x-full'"
     >
       <div class="flex items-center justify-between p-4 md:hidden">
