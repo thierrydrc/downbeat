@@ -1,7 +1,10 @@
 <script setup>
 import { onUnmounted, watch } from 'vue'
 import { mdiClose } from '@mdi/js'
+import { useI18n } from '../composables/useI18n.js'
 import MdiIcon from './MdiIcon.vue'
+
+const { t } = useI18n()
 
 const props = defineProps({
   open: { type: Boolean, default: false },
@@ -43,7 +46,7 @@ onUnmounted(() => window.removeEventListener('keydown', handleKeydown))
           <button
             type="button"
             class="flex h-10 w-10 items-center justify-center rounded-full text-downbeat-text/60 outline-none transition-colors motion-reduce:transition-none hover:text-downbeat-accent focus-visible:ring-2 focus-visible:ring-downbeat-accent"
-            aria-label="Fermer"
+            :aria-label="t('common.close')"
             @click="emit('close')"
           >
             <MdiIcon :path="mdiClose" class="h-5 w-5" />

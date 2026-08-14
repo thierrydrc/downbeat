@@ -1,5 +1,8 @@
 <script setup>
 import { computed, ref, watch } from 'vue'
+import { useI18n } from '../composables/useI18n.js'
+
+const { t } = useI18n()
 
 const props = defineProps({
   currentBeat: { type: Number, default: -1 },
@@ -36,7 +39,7 @@ watch(
             : 'border-downbeat-outline bg-downbeat-panel focus-visible:ring-downbeat-accent'
       "
       :aria-pressed="isPlaying"
-      aria-label="Démarrer ou arrêter le métronome"
+      :aria-label="t('display.toggle')"
       @click="emit('toggle')"
     >
       <span
@@ -49,7 +52,7 @@ watch(
       </span>
     </button>
 
-    <div class="flex gap-3" role="list" aria-label="Position dans la mesure">
+    <div class="flex gap-3" role="list" :aria-label="t('display.beatPosition')">
       <span
         v-for="dot in dots"
         :key="dot"

@@ -1,8 +1,8 @@
 # Downbeat
 
 Web metronome for bands: start/stop, 4/4 and 3/4 time signatures, tap tempo, volume, presets
-(tempo + time signature) saved locally (reorderable, exportable/importable as JSON), and
-light/dark theme.
+(tempo + time signature) saved locally (reorderable, exportable/importable as JSON),
+light/dark theme, and a 6-language interface (auto-detected, switchable).
 
 Works **offline**, over `file://` (the `dist/` folder) or installed as a PWA.
 
@@ -56,6 +56,13 @@ From <https://thierrydrc.github.io/DownBeat/>:
   Chrome, runs on Safari's engine, but only Safari has access to PWA installation). Open the
   link in Safari, then **Share** → **Add to Home Screen**.
 
+## Languages
+
+The interface is available in French (default), English, Spanish, German, Italian and
+Portuguese. On first launch the app follows the browser's language (falling back to French);
+the translate button in the header switches it at any time, and that choice is saved locally
+and takes precedence from then on.
+
 ## Volume
 
 There is no in-app volume control: the click plays at 100% of the device's native output, so
@@ -84,7 +91,7 @@ on Android) for media above that duration — anything shorter is treated as an 
 sound.
 
 Since playback survives the screen locking, the screen is allowed to lock normally. An
-opt-in "Garder l'écran allumé" switch (persisted across launches) keeps it on via the Wake
+opt-in "Keep the screen on" switch (persisted across launches) keeps it on via the Wake
 Lock API — best effort: iOS refuses the request in Low Power Mode (which forces a 30 s
 auto-lock), in which case the app shows a small notice under the switch. While the metronome
 is running, audio automatically resumes after an interruption (phone call, notification...)

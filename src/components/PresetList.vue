@@ -2,8 +2,11 @@
 import { ref } from 'vue'
 import { mdiDotsVertical, mdiDownload, mdiDragVertical, mdiPlus, mdiTrashCanOutline, mdiUpload } from '@mdi/js'
 import { usePresets } from '../composables/usePresets.js'
+import { useI18n } from '../composables/useI18n.js'
 import MdiIcon from './MdiIcon.vue'
 import Modal from './Modal.vue'
+
+const { t } = useI18n()
 
 const props = defineProps({
   selectedPresetId: { type: String, default: null },
@@ -38,7 +41,7 @@ function handleLoad(preset) {
 }
 
 function handleRemove(preset) {
-  if (!window.confirm(`Supprimer "${preset.name}" de la liste ?`)) return
+  if (!window.confirm(t('presets.confirmRemove', { name: preset.name }))) return
   removePreset(preset.id)
   emit('remove-preset', preset.id)
 }
@@ -55,12 +58,12 @@ async function handleFileChange(event) {
   try {
     const text = await file.text()
     const data = JSON.parse(text)
-    const replace = window.confirm(
-      'Remplacer la liste actuelle par le fichier importé ?\nOK = remplacer\nAnnuler = fusionner avec la liste existante',
-    )
+    const replace = window.confirm(t('presets.confirmImportReplace'))
     importPresets(data, { replace })
   } catch {
-    importError.value = 'Fichier JSON invalide.'
+    // On stocke la clé (pas la chaîne traduite) pour que le message affiché
+    // reste réactif si l'utilisateur change de langue pendant qu'il est visible.
+    importError.value = 'presets.importInvalid'
   }
 }
 
@@ -111,7 +114,7 @@ function endDrag() {
 
 <template>
   <div class="flex w-full flex-col gap-4">
-    <h2 class="hidden text-lg font-semibold text-downbeat-text md:block">Presets ({{ presets.length }})</h2>
+    <h2 class="hidden text-lg font-semibold text-downbeat-text md:block">{{ t('presets.title', { count: presets.length }) }}</h2>
 
     <div class="flex gap-2">
       <button
@@ -120,13 +123,13 @@ function endDrag() {
         @click="isAddModalOpen = true"
       >
         <MdiIcon :path="mdiPlus" class="h-4 w-4" />
-        Ajouter un preset
+        {{ t('presets.add') }}
       </button>
 
       <button
         type="button"
         class="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg border border-downbeat-panel-2 text-downbeat-text/80 outline-none transition-colors motion-reduce:transition-none hover:bg-downbeat-panel-2 hover:text-downbeat-text focus-visible:ring-2 focus-visible:ring-downbeat-accent"
-        aria-label="Options d'export et d'import"
+        :aria-label="t('presets.exportImportOptions')"
         @click="isExportModalOpen = true"
       >
         <MdiIcon :path="mdiDotsVertical" class="h-5 w-5" />
@@ -139,7 +142,7 @@ function endDrag() {
         @change="handleFileChange"
       />
     </div>
-    <p v-if="importError" class="text-sm text-downbeat-accent">{{ importError }}</p>
+    <p v-if="importError" class="text-sm text-downbeat-accent">{{ t(importError) }}</p>
 
     <ul v-if="presets.length" class="flex flex-col gap-2">
       <li
@@ -156,7 +159,7 @@ function endDrag() {
           class="flex h-10 w-10 shrink-0 touch-none cursor-grab items-center justify-center rounded-lg text-downbeat-text/40 outline-none focus-visible:ring-2 focus-visible:ring-downbeat-accent active:cursor-grabbing"
           role="button"
           tabindex="0"
-          aria-label="Réordonner le preset"
+          :aria-label="t('presets.reorder')"
           @pointerdown="startDrag(preset, $event)"
           @pointermove="handlePointerMove"
           @pointerup="endDrag"
@@ -184,21 +187,21 @@ function endDrag() {
         <button
           type="button"
           class="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg text-downbeat-text/60 outline-none transition-colors motion-reduce:transition-none hover:text-downbeat-accent focus-visible:ring-2 focus-visible:ring-downbeat-accent"
-          aria-label="Supprimer le preset"
+          :aria-label="t('presets.remove')"
           @click="handleRemove(preset)"
         >
           <MdiIcon :path="mdiTrashCanOutline" class="h-4 w-4" />
         </button>
       </li>
     </ul>
-    <p v-else class="text-sm text-downbeat-text/50">Aucun preset enregistré.</p>
+    <p v-else class="text-sm text-downbeat-text/50">{{ t('presets.empty') }}</p>
 
-    <Modal :open="isAddModalOpen" title="Ajouter un preset" @close="closeAddModal">
+    <Modal :open="isAddModalOpen" :title="t('presets.add')" @close="closeAddModal">
       <form class="flex flex-col gap-3" @submit.prevent="handleAdd">
         <input
           v-model="name"
           type="text"
-          placeholder="Nom du preset"
+          :placeholder="t('common.presetNamePlaceholder')"
           class="rounded-lg bg-downbeat-panel-2 px-3 py-2 text-downbeat-text outline-none placeholder:text-downbeat-text/40 focus-visible:ring-2 focus-visible:ring-downbeat-accent"
           required
           autofocus
@@ -209,7 +212,7 @@ function endDrag() {
             type="number"
             min="30"
             max="240"
-            placeholder="Tempo"
+            :placeholder="t('presets.tempoPlaceholder')"
             class="w-1/2 rounded-lg bg-downbeat-panel-2 px-3 py-2 font-mono text-downbeat-text outline-none focus-visible:ring-2 focus-visible:ring-downbeat-accent"
             required
           />
@@ -225,12 +228,12 @@ function endDrag() {
           type="submit"
           class="rounded-lg bg-downbeat-accent py-2 text-sm font-semibold text-downbeat-on-accent outline-none transition-colors motion-reduce:transition-none hover:brightness-110 focus-visible:ring-2 focus-visible:ring-downbeat-accent/50"
         >
-          Ajouter
+          {{ t('presets.addSubmit') }}
         </button>
       </form>
     </Modal>
 
-    <Modal :open="isExportModalOpen" title="Exporter / Importer" @close="isExportModalOpen = false">
+    <Modal :open="isExportModalOpen" :title="t('presets.exportImportTitle')" @close="isExportModalOpen = false">
       <div class="flex flex-col gap-2">
         <button
           type="button"
@@ -239,7 +242,7 @@ function endDrag() {
           @click="handleExportClick"
         >
           <MdiIcon :path="mdiDownload" class="h-4 w-4" />
-          Exporter la liste en JSON
+          {{ t('presets.exportJson') }}
         </button>
         <button
           type="button"
@@ -247,7 +250,7 @@ function endDrag() {
           @click="handleImportClick"
         >
           <MdiIcon :path="mdiUpload" class="h-4 w-4" />
-          Importer une liste JSON
+          {{ t('presets.importJson') }}
         </button>
       </div>
     </Modal>

@@ -1,6 +1,9 @@
 <script setup>
 import { mdiMinus, mdiPlus } from '@mdi/js'
+import { useI18n } from '../composables/useI18n.js'
 import MdiIcon from './MdiIcon.vue'
+
+const { t } = useI18n()
 
 defineProps({
   tempo: { type: Number, required: true },
@@ -16,7 +19,7 @@ const emit = defineEmits(['set-tempo', 'increment-tempo', 'tap-tempo', 'set-beat
   <div class="flex w-full max-w-md flex-col gap-4 rounded-2xl bg-downbeat-panel p-5 shadow-lg">
     <div class="flex flex-col gap-2">
       <div class="flex items-center justify-between">
-        <label for="tempo-slider" class="text-sm text-downbeat-text/70">Tempo</label>
+        <label for="tempo-slider" class="text-sm text-downbeat-text/70">{{ t('controls.tempo') }}</label>
         <div class="flex items-center gap-3">
           <button
             type="button"
@@ -35,7 +38,7 @@ const emit = defineEmits(['set-tempo', 'increment-tempo', 'tap-tempo', 'set-beat
           type="button"
           class="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-downbeat-panel-2 text-downbeat-text outline-none transition-colors motion-reduce:transition-none hover:bg-downbeat-panel-2/70 focus-visible:ring-2 focus-visible:ring-downbeat-accent disabled:opacity-40"
           :disabled="tempo <= minTempo"
-          aria-label="Diminuer le tempo"
+          :aria-label="t('controls.decreaseTempo')"
           @click="emit('increment-tempo', -1)"
         >
           <MdiIcon :path="mdiMinus" class="h-5 w-5" />
@@ -53,7 +56,7 @@ const emit = defineEmits(['set-tempo', 'increment-tempo', 'tap-tempo', 'set-beat
           type="button"
           class="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-downbeat-panel-2 text-downbeat-text outline-none transition-colors motion-reduce:transition-none hover:bg-downbeat-panel-2/70 focus-visible:ring-2 focus-visible:ring-downbeat-accent disabled:opacity-40"
           :disabled="tempo >= maxTempo"
-          aria-label="Augmenter le tempo"
+          :aria-label="t('controls.increaseTempo')"
           @click="emit('increment-tempo', 1)"
         >
           <MdiIcon :path="mdiPlus" class="h-5 w-5" />
@@ -62,7 +65,7 @@ const emit = defineEmits(['set-tempo', 'increment-tempo', 'tap-tempo', 'set-beat
     </div>
 
     <div class="flex flex-col gap-2">
-      <span class="select-none text-sm text-downbeat-text/70">Mesure</span>
+      <span class="select-none text-sm text-downbeat-text/70">{{ t('controls.measure') }}</span>
       <div class="grid grid-cols-2 gap-2">
         <button
           v-for="option in [4, 3]"

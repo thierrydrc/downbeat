@@ -6,6 +6,7 @@ import {
   mdiClose,
   mdiGithub,
   mdiPlaylistMusic,
+  mdiTranslate,
   mdiWeatherNight,
   mdiWeatherSunny,
 } from '@mdi/js'
@@ -13,6 +14,7 @@ import { useMetronome } from './composables/useMetronome.js'
 import { usePresets } from './composables/usePresets.js'
 import { useTheme } from './composables/useTheme.js'
 import { useWakeLock } from './composables/useWakeLock.js'
+import { useI18n } from './composables/useI18n.js'
 import { version, repository } from '../package.json'
 import MetronomeDisplay from './components/MetronomeDisplay.vue'
 import MetronomeControls from './components/MetronomeControls.vue'
@@ -41,12 +43,19 @@ const {
 const { presets, addPreset, updatePreset } = usePresets()
 const { theme, toggleTheme } = useTheme()
 const { keepAwake, toggleKeepAwake, wakeLockSupported, wakeLockDenied } = useWakeLock()
+const { lang, setLang, t, languages } = useI18n()
 
 const loadedPreset = ref(null)
 const isEditingPreset = ref(false)
 const isSidebarOpen = ref(false)
 const isSavePresetModalOpen = ref(false)
+const isLanguageModalOpen = ref(false)
 const newPresetName = ref('')
+
+function selectLanguage(code) {
+  setLang(code)
+  isLanguageModalOpen.value = false
+}
 
 function closeSidebar() {
   isSidebarOpen.value = false
@@ -163,84 +172,72 @@ function handleSaveNewPreset() {
             <h1 class="text-base font-bold tracking-tight">down<span class="text-downbeat-accent">beat</span></h1>
           </div>
           <div class="flex shrink-0 items-center gap-2 md:hidden">
-            <button
-              type="button"
+            <button type="button"
               class="rounded-lg border border-downbeat-panel-2 bg-downbeat-panel p-2.5 text-downbeat-text outline-none transition-colors motion-reduce:transition-none hover:bg-downbeat-panel-2 focus-visible:ring-2 focus-visible:ring-downbeat-accent"
-              :aria-label="theme === 'dark' ? 'Passer en mode clair' : 'Passer en mode sombre'"
-              @click="toggleTheme"
-            >
+              :aria-label="t('language.open')" @click="isLanguageModalOpen = true">
+              <MdiIcon :path="mdiTranslate" class="h-6 w-6" />
+            </button>
+            <button type="button"
+              class="rounded-lg border border-downbeat-panel-2 bg-downbeat-panel p-2.5 text-downbeat-text outline-none transition-colors motion-reduce:transition-none hover:bg-downbeat-panel-2 focus-visible:ring-2 focus-visible:ring-downbeat-accent"
+              :aria-label="theme === 'dark' ? t('theme.switchToLight') : t('theme.switchToDark')" @click="toggleTheme">
               <MdiIcon :path="theme === 'dark' ? mdiWeatherSunny : mdiWeatherNight" class="h-6 w-6" />
             </button>
-            <button
-              type="button"
+            <button type="button"
               class="rounded-lg border border-downbeat-panel-2 bg-downbeat-panel p-2.5 text-downbeat-text outline-none transition-colors motion-reduce:transition-none hover:bg-downbeat-panel-2 focus-visible:ring-2 focus-visible:ring-downbeat-accent"
-              aria-label="Ouvrir la liste des presets"
-              aria-controls="preset-sidebar"
-              :aria-expanded="isSidebarOpen"
-              @click="isSidebarOpen = true"
-            >
+              :aria-label="t('presets.open')" aria-controls="preset-sidebar" :aria-expanded="isSidebarOpen"
+              @click="isSidebarOpen = true">
               <MdiIcon :path="mdiPlaylistMusic" class="h-6 w-6" />
             </button>
           </div>
         </header>
 
         <!-- Desktop: the sidebar is always visible (no toggle button), so
-        this button lives outside the centered header, fixed to its left
-        edge with a small margin. -->
-        <button
-          type="button"
-          class="hidden rounded-lg border border-downbeat-panel-2 bg-downbeat-panel p-2.5 text-downbeat-text outline-none transition-colors motion-reduce:transition-none hover:bg-downbeat-panel-2 focus-visible:ring-2 focus-visible:ring-downbeat-accent md:fixed md:right-84 md:top-5 md:z-20 md:flex"
-          :aria-label="theme === 'dark' ? 'Passer en mode clair' : 'Passer en mode sombre'"
-          @click="toggleTheme"
-        >
-          <MdiIcon :path="theme === 'dark' ? mdiWeatherSunny : mdiWeatherNight" class="h-6 w-6" />
-        </button>
+        these buttons live outside the centered header, fixed to its left
+        edge with a small margin. The container is right-anchored, so it
+        grows leftward and the theme toggle keeps its position. -->
+        <div class="hidden md:fixed md:right-84 md:top-5 md:z-20 md:flex md:gap-2">
+          <button type="button"
+            class="rounded-lg border border-downbeat-panel-2 bg-downbeat-panel p-2.5 text-downbeat-text outline-none transition-colors motion-reduce:transition-none hover:bg-downbeat-panel-2 focus-visible:ring-2 focus-visible:ring-downbeat-accent"
+            :aria-label="t('language.open')" @click="isLanguageModalOpen = true">
+            <MdiIcon :path="mdiTranslate" class="h-6 w-6" />
+          </button>
+          <button type="button"
+            class="rounded-lg border border-downbeat-panel-2 bg-downbeat-panel p-2.5 text-downbeat-text outline-none transition-colors motion-reduce:transition-none hover:bg-downbeat-panel-2 focus-visible:ring-2 focus-visible:ring-downbeat-accent"
+            :aria-label="theme === 'dark' ? t('theme.switchToLight') : t('theme.switchToDark')" @click="toggleTheme">
+            <MdiIcon :path="theme === 'dark' ? mdiWeatherSunny : mdiWeatherNight" class="h-6 w-6" />
+          </button>
+        </div>
 
         <main class="flex flex-1 flex-col items-center gap-4">
-          <MetronomeDisplay
-            :current-beat="currentBeat"
-            :is-playing="isPlaying"
-            :beats-per-measure="beatsPerMeasure"
-            @toggle="toggle"
-          />
+          <MetronomeDisplay :current-beat="currentBeat" :is-playing="isPlaying" :beats-per-measure="beatsPerMeasure"
+            @toggle="toggle" />
 
           <div v-if="loadedPreset" class="flex w-full max-w-md flex-col">
             <template v-if="loadedPreset">
               <div class="flex items-center gap-1.5">
-                <button
-                  type="button"
+                <button type="button"
                   class="flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-downbeat-panel-2 bg-downbeat-panel text-downbeat-text/60 outline-none transition-colors motion-reduce:transition-none hover:bg-downbeat-panel-2 hover:text-downbeat-accent focus-visible:ring-2 focus-visible:ring-downbeat-accent disabled:pointer-events-none disabled:opacity-30"
-                  aria-label="Preset précédent"
-                  :disabled="!canGoPrevPreset"
-                  @click="goToPreset(-1)"
-                >
+                  :aria-label="t('presets.previous')" :disabled="!canGoPrevPreset" @click="goToPreset(-1)">
                   <MdiIcon :path="mdiChevronLeft" class="h-5 w-5" />
                 </button>
 
                 <div class="flex min-w-0 flex-1 flex-col gap-0.5 rounded-xl bg-downbeat-panel px-3 py-2 shadow-sm">
                   <div class="flex items-center justify-between gap-2">
                     <span class="text-[11px] text-downbeat-text/50">
-                      Preset chargé · {{ currentPresetIndex + 1 }} sur {{ presets.length }}
+                      {{ t('presets.loadedPosition', { n: currentPresetIndex + 1, total: presets.length }) }}
                     </span>
-                    <button
-                      type="button"
+                    <button type="button"
                       class="flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-downbeat-text/60 outline-none transition-colors motion-reduce:transition-none hover:bg-downbeat-panel-2 hover:text-downbeat-accent focus-visible:ring-2 focus-visible:ring-downbeat-accent"
-                      aria-label="Désélectionner le preset"
-                      @click="deselectPreset"
-                    >
+                      :aria-label="t('presets.deselect')" @click="deselectPreset">
                       <MdiIcon :path="mdiClose" class="h-4 w-4" />
                     </button>
                   </div>
                   <span class="break-words text-sm font-semibold text-downbeat-accent">{{ loadedPreset.name }}</span>
                 </div>
 
-                <button
-                  type="button"
+                <button type="button"
                   class="flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-downbeat-panel-2 bg-downbeat-panel text-downbeat-text/60 outline-none transition-colors motion-reduce:transition-none hover:bg-downbeat-panel-2 hover:text-downbeat-accent focus-visible:ring-2 focus-visible:ring-downbeat-accent disabled:pointer-events-none disabled:opacity-30"
-                  aria-label="Preset suivant"
-                  :disabled="!canGoNextPreset"
-                  @click="goToPreset(1)"
-                >
+                  :aria-label="t('presets.next')" :disabled="!canGoNextPreset" @click="goToPreset(1)">
                   <MdiIcon :path="mdiChevronRight" class="h-5 w-5" />
                 </button>
               </div>
@@ -248,31 +245,18 @@ function handleSaveNewPreset() {
           </div>
 
           <template v-if="!loadedPreset || isEditingPreset">
-            <MetronomeControls
-              :tempo="tempo"
-              :beats-per-measure="beatsPerMeasure"
-              :min-tempo="minTempo"
-              :max-tempo="maxTempo"
-              @set-tempo="setTempo"
-              @increment-tempo="incrementTempo"
-              @tap-tempo="tapTempo"
-              @set-beats-per-measure="setBeatsPerMeasure"
-            >
-              <button
-                v-if="loadedPreset && isEditingPreset"
-                type="button"
+            <MetronomeControls :tempo="tempo" :beats-per-measure="beatsPerMeasure" :min-tempo="minTempo"
+              :max-tempo="maxTempo" @set-tempo="setTempo" @increment-tempo="incrementTempo" @tap-tempo="tapTempo"
+              @set-beats-per-measure="setBeatsPerMeasure">
+              <button v-if="loadedPreset && isEditingPreset" type="button"
                 class="flex h-11 w-full items-center justify-center rounded-lg bg-downbeat-accent px-3 text-sm font-semibold text-downbeat-on-accent outline-none transition-colors motion-reduce:transition-none hover:brightness-110 focus-visible:ring-2 focus-visible:ring-downbeat-accent/50"
-                @click="handleSaveEdit"
-              >
-                Enregistrer
+                @click="handleSaveEdit">
+                {{ t('common.save') }}
               </button>
-              <button
-                v-if="!loadedPreset"
-                type="button"
+              <button v-if="!loadedPreset" type="button"
                 class="flex h-11 w-full items-center justify-center rounded-lg bg-downbeat-accent px-3 text-sm font-semibold text-downbeat-on-accent outline-none transition-colors motion-reduce:transition-none hover:brightness-110 focus-visible:ring-2 focus-visible:ring-downbeat-accent/50"
-                @click="openSavePresetModal"
-              >
-                Enregistrer le preset
+                @click="openSavePresetModal">
+                {{ t('presets.saveNew') }}
               </button>
             </MetronomeControls>
           </template>
@@ -283,12 +267,10 @@ function handleSaveNewPreset() {
                 <span class="text-downbeat-text/50">·</span>
                 {{ beatsPerMeasure }}/4
               </span>
-              <button
-                type="button"
+              <button type="button"
                 class="flex h-10 items-center rounded-lg bg-downbeat-panel-2 px-4 text-sm font-semibold text-downbeat-text outline-none transition-colors motion-reduce:transition-none hover:bg-downbeat-panel-2/70 focus-visible:ring-2 focus-visible:ring-downbeat-accent"
-                @click="isEditingPreset = true"
-              >
-                Modifier
+                @click="isEditingPreset = true">
+                {{ t('presets.edit') }}
               </button>
             </div>
           </template>
@@ -299,96 +281,78 @@ function handleSaveNewPreset() {
           never during the acquisition window. -->
           <div v-if="wakeLockSupported" class="flex w-full max-w-md flex-col gap-2">
             <div class="flex items-center justify-between gap-3 rounded-xl bg-downbeat-panel px-4 py-3">
-              <span id="keep-awake-label" class="text-sm text-downbeat-text/80">Garder l'écran allumé</span>
-              <button
-                type="button"
-                role="switch"
-                :aria-checked="keepAwake"
-                aria-labelledby="keep-awake-label"
+              <span id="keep-awake-label" class="text-sm text-downbeat-text/80">{{ t('wakeLock.label') }}</span>
+              <button type="button" role="switch" :aria-checked="keepAwake" aria-labelledby="keep-awake-label"
                 class="relative h-7 w-12 shrink-0 rounded-full outline-none transition-colors motion-reduce:transition-none focus-visible:ring-2 focus-visible:ring-downbeat-accent"
-                :class="keepAwake ? 'bg-downbeat-accent' : 'bg-downbeat-panel-2'"
-                @click="toggleKeepAwake"
-              >
+                :class="keepAwake ? 'bg-downbeat-accent' : 'bg-downbeat-panel-2'" @click="toggleKeepAwake">
                 <span
                   class="absolute left-1 top-1 h-5 w-5 rounded-full transition-transform motion-reduce:transition-none"
-                  :class="keepAwake ? 'translate-x-5 bg-downbeat-on-accent' : 'bg-downbeat-outline'"
-                />
+                  :class="keepAwake ? 'translate-x-5 bg-downbeat-on-accent' : 'bg-downbeat-outline'" />
               </button>
             </div>
-            <p
-              v-if="keepAwake && wakeLockDenied"
-              role="status"
-              class="w-full rounded-lg bg-downbeat-panel px-3 py-2 text-center text-xs text-downbeat-text/60"
-            >
-              Maintien d'écran refusé par le système (mode économie d'énergie&nbsp;?).
+            <p v-if="keepAwake && wakeLockDenied" role="status"
+              class="w-full rounded-lg bg-downbeat-panel px-3 py-2 text-center text-xs text-downbeat-text/60">
+              {{ t('wakeLock.denied') }}
             </p>
           </div>
         </main>
 
         <footer class="flex items-center justify-center gap-1.5 pb-1 text-[11px] text-downbeat-text/30">
-          <span>v{{ version }}</span>
-          <a
-            :href="repositoryUrl"
-            target="_blank"
-            rel="noopener noreferrer"
-            class="text-downbeat-text/30 outline-none transition-colors motion-reduce:transition-none hover:text-downbeat-text/60 focus-visible:ring-2 focus-visible:ring-downbeat-accent"
-            aria-label="Voir le projet sur GitHub"
-          >
+          <a :href="repositoryUrl" target="_blank" rel="noopener noreferrer"
+            class="inline-flex items-center gap-1 text-downbeat-text/30 outline-none transition-colors motion-reduce:transition-none hover:text-downbeat-text/60 focus-visible:ring-2 focus-visible:ring-downbeat-accent"
+            :aria-label="t('footer.github')">
+            <span>v{{ version }}</span>
             <MdiIcon :path="mdiGithub" class="h-3.5 w-3.5" />
           </a>
         </footer>
       </div>
     </div>
 
-    <div
-      v-if="isSidebarOpen"
-      class="fixed inset-0 z-30 bg-black/60 md:hidden"
-      @click="closeSidebar"
-    />
+    <div v-if="isSidebarOpen" class="fixed inset-0 z-30 bg-black/60 md:hidden" @click="closeSidebar" />
 
-    <aside
-      id="preset-sidebar"
+    <aside id="preset-sidebar"
       class="fixed inset-y-0 right-0 z-40 w-80 max-w-[85vw] transform overflow-y-auto bg-downbeat-panel transition-transform duration-200 ease-out motion-reduce:transition-none md:translate-x-0"
-      :class="isSidebarOpen ? 'translate-x-0' : 'translate-x-full'"
-    >
+      :class="isSidebarOpen ? 'translate-x-0' : 'translate-x-full'">
       <div class="flex items-center justify-between p-4 md:hidden">
-        <span class="text-lg font-semibold">Presets ({{ presets.length }})</span>
-        <button
-          type="button"
+        <span class="text-lg font-semibold">{{ t('presets.title', { count: presets.length }) }}</span>
+        <button type="button"
           class="flex h-10 w-10 items-center justify-center rounded-full text-downbeat-text/70 outline-none transition-colors motion-reduce:transition-none hover:text-downbeat-accent focus-visible:ring-2 focus-visible:ring-downbeat-accent"
-          aria-label="Fermer la liste des presets"
-          @click="closeSidebar"
-        >
+          :aria-label="t('presets.closeList')" @click="closeSidebar">
           <MdiIcon :path="mdiClose" class="h-5 w-5" />
         </button>
       </div>
 
       <div class="h-full px-4 pb-6 md:p-6">
-        <PresetList
-          :selected-preset-id="loadedPreset?.id ?? null"
-          @load-preset="handleLoadPreset"
-          @remove-preset="handleRemovePreset"
-        />
+        <PresetList :selected-preset-id="loadedPreset?.id ?? null" @load-preset="handleLoadPreset"
+          @remove-preset="handleRemovePreset" />
       </div>
     </aside>
 
-    <Modal :open="isSavePresetModalOpen" title="Enregistrer le preset" @close="closeSavePresetModal">
+    <Modal :open="isSavePresetModalOpen" :title="t('presets.saveNew')" @close="closeSavePresetModal">
       <form class="flex flex-col gap-3" @submit.prevent="handleSaveNewPreset">
-        <input
-          v-model="newPresetName"
-          type="text"
-          placeholder="Nom du preset"
+        <input v-model="newPresetName" type="text" :placeholder="t('common.presetNamePlaceholder')"
           class="rounded-lg bg-downbeat-panel-2 px-3 py-2 text-downbeat-text outline-none placeholder:text-downbeat-text/40 focus-visible:ring-2 focus-visible:ring-downbeat-accent"
-          required
-          autofocus
-        />
-        <button
-          type="submit"
-          class="rounded-lg bg-downbeat-accent py-2 text-sm font-semibold text-downbeat-on-accent outline-none transition-colors motion-reduce:transition-none hover:brightness-110 focus-visible:ring-2 focus-visible:ring-downbeat-accent/50"
-        >
-          Enregistrer
+          required autofocus />
+        <button type="submit"
+          class="rounded-lg bg-downbeat-accent py-2 text-sm font-semibold text-downbeat-on-accent outline-none transition-colors motion-reduce:transition-none hover:brightness-110 focus-visible:ring-2 focus-visible:ring-downbeat-accent/50">
+          {{ t('common.save') }}
         </button>
       </form>
+    </Modal>
+
+    <Modal :open="isLanguageModalOpen" :title="t('language.title')" @close="isLanguageModalOpen = false">
+      <ul class="flex flex-col gap-2">
+        <li v-for="language in languages" :key="language.code">
+          <button type="button"
+            class="flex h-11 w-full items-center rounded-lg bg-downbeat-panel-2 px-3 text-sm outline-none transition-colors motion-reduce:transition-none focus-visible:ring-2 focus-visible:ring-downbeat-accent"
+            :class="language.code === lang
+                ? 'font-semibold text-downbeat-accent ring-2 ring-downbeat-accent'
+                : 'text-downbeat-text hover:text-downbeat-accent'
+              " :aria-pressed="language.code === lang" :lang="language.code" @click="selectLanguage(language.code)">
+            {{ language.name }}
+          </button>
+        </li>
+      </ul>
     </Modal>
   </div>
 </template>
